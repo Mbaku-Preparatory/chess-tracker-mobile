@@ -8,7 +8,6 @@ import { useNavigation } from "@react-navigation/native";
 import { api } from "@/lib/api";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { clearAuth, setProfilePic } from "@/redux/actions/auth";
-import { toggleTheme } from "@/redux/actions/theme";
 import { useTheme } from "@/theme/ThemeContext";
 import { ThemePicker } from "@/components/ui/ThemePicker";
 import type { RootStackParamList } from "@/navigation/types";
@@ -23,7 +22,6 @@ export function AppHeader() {
 
   const { refreshToken, email, profilePic } = useAppSelector((s) => s.auth);
   const { onboardingComplete, initialized } = useAppSelector((s) => s.repertoire);
-  const themeMode = useAppSelector((s) => s.theme.mode);
 
   async function handleLogout() {
     setMenuOpen(false);
@@ -70,9 +68,6 @@ export function AppHeader() {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate("MasterGames")} style={st.navBtn}>
             <Ionicons name="library-outline" size={20} color={t.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => dispatch(toggleTheme())} style={st.navBtn}>
-            <Ionicons name={themeMode === "dark" ? "sunny-outline" : "moon-outline"} size={19} color={t.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuOpen(true)} style={st.avatarBtn}>
             {profilePic ? (

@@ -1,38 +1,27 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ThemeId } from "@/lib/themes";
 
-const MODE_KEY = "theme";
 const SCHEME_KEY = "color_scheme";
 const CUSTOM_COLOR_KEY = "custom_color";
 
 interface ThemeCache {
-  mode: "light" | "dark" | null;
   colorScheme: ThemeId | null;
   customColor: string | null;
 }
 
-const cache: ThemeCache = { mode: null, colorScheme: null, customColor: null };
+const cache: ThemeCache = { colorScheme: null, customColor: null };
 
 // Same synchronous-read-over-hydrated-cache pattern as lib/auth.ts.
 export async function hydrateThemeStorage(): Promise<void> {
-  const [mode, colorScheme, customColor] = await Promise.all([
-    AsyncStorage.getItem(MODE_KEY),
+  const [colorScheme, customColor] = await Promise.all([
     AsyncStorage.getItem(SCHEME_KEY),
     AsyncStorage.getItem(CUSTOM_COLOR_KEY),
   ]);
-  cache.mode = mode === "dark" ? "dark" : mode === "light" ? "light" : null;
   cache.colorScheme = (colorScheme as ThemeId) ?? null;
   cache.customColor = customColor;
 }
 
 export const themeStorage = {
-  getMode(): "light" | "dark" | null {
-    return cache.mode;
-  },
-  setMode(mode: "light" | "dark") {
-    cache.mode = mode;
-    void AsyncStorage.setItem(MODE_KEY, mode);
-  },
   getColorScheme(): ThemeId | null {
     return cache.colorScheme;
   },

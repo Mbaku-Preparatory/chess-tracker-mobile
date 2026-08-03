@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo } from "react";
+import { useColorScheme } from "react-native";
 
 import { useAppSelector } from "@/redux/hooks";
 import { brandColor, getThemeVars, type BrandShade } from "@/lib/themes";
@@ -56,7 +57,10 @@ function buildTheme(mode: "light" | "dark", vars: Record<string, string>): AppTh
 const ThemeCtx = createContext<AppTheme>(buildTheme("light", getThemeVars("ocean")));
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { mode, colorScheme, customColor } = useAppSelector((s) => s.theme);
+  const { colorScheme, customColor } = useAppSelector((s) => s.theme);
+  // Follows the OS setting directly - there is no in-app override, so this
+  // stays in sync automatically if the user changes it at the system level.
+  const mode = useColorScheme() === "dark" ? "dark" : "light";
   const vars = useMemo(() => getThemeVars(colorScheme, customColor), [colorScheme, customColor]);
   const theme = useMemo(() => buildTheme(mode, vars), [mode, vars]);
   return <ThemeCtx.Provider value={theme}>{children}</ThemeCtx.Provider>;
