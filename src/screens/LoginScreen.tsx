@@ -54,14 +54,13 @@ export function LoginScreen({ navigation }: Props) {
           )}
 
           <TextField
-            label="Email"
+            label="Email or username"
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
+            placeholder="you@example.com or username"
             autoCapitalize="none"
             autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
+            textContentType="username"
           />
           <TextField
             label="Password"

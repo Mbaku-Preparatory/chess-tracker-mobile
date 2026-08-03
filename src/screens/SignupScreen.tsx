@@ -14,6 +14,9 @@ type Props = NativeStackScreenProps<RootStackParamList, "Signup">;
 export function SignupScreen({ navigation }: Props) {
   const t = useTheme();
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,7 +31,13 @@ export function SignupScreen({ navigation }: Props) {
     setError(null);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      await api.register(normalizedEmail, password);
+      await api.register(
+        normalizedEmail,
+        password,
+        username.trim(),
+        firstName.trim(),
+        lastName.trim()
+      );
       navigation.navigate("VerifyEmail", { email: normalizedEmail });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed.");
@@ -57,6 +66,37 @@ export function SignupScreen({ navigation }: Props) {
             </View>
           )}
 
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <TextField
+                label="First name"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Ada"
+                autoCapitalize="words"
+                textContentType="givenName"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <TextField
+                label="Last name"
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Lovelace"
+                autoCapitalize="words"
+                textContentType="familyName"
+              />
+            </View>
+          </View>
+          <TextField
+            label="Username (min 3 chars)"
+            value={username}
+            onChangeText={setUsername}
+            placeholder="ada_lovelace"
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="username"
+          />
           <TextField
             label="Email"
             value={email}
@@ -80,7 +120,7 @@ export function SignupScreen({ navigation }: Props) {
             title={loading ? "Creating account…" : "Create account"}
             onPress={handleSubmit}
             loading={loading}
-            disabled={!email || !password}
+            disabled={!email || !password || !username || !firstName || !lastName}
             fullWidth
           />
         </Card>
