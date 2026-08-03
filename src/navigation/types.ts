@@ -1,6 +1,7 @@
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
+  VerifyEmail: { email: string };
   Players: undefined;
   PlayerNew: undefined;
   PlayerDetail: { slug: string };

@@ -321,11 +321,30 @@ export const api = {
   register(
     email: string,
     password: string
-  ): Promise<{ access: string; refresh: string; email: string }> {
+  ): Promise<{ detail: string; email: string }> {
     return fetchJson(`${API_BASE}/auth/register/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
+    });
+  },
+
+  verifyEmail(
+    email: string,
+    code: string
+  ): Promise<{ access: string; refresh: string; email: string }> {
+    return fetchJson(`${API_BASE}/auth/verify-email/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
+  },
+
+  resendVerification(email: string): Promise<{ detail: string }> {
+    return fetchJson(`${API_BASE}/auth/resend-verification/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
   },
 

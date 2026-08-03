@@ -10,6 +10,7 @@ import type { RootStackParamList } from "./types";
 
 import { LoginScreen } from "@/screens/LoginScreen";
 import { SignupScreen } from "@/screens/SignupScreen";
+import { VerifyEmailScreen } from "@/screens/VerifyEmailScreen";
 import { PlayersScreen } from "@/screens/PlayersScreen";
 import { PlayerNewScreen } from "@/screens/PlayerNewScreen";
 import { PlayerDetailScreen } from "@/screens/PlayerDetailScreen";
@@ -65,6 +66,7 @@ export function RootNavigator() {
         <Stack.Group>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Signup" component={SignupScreen} />
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>
