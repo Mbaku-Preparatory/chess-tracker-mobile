@@ -10,7 +10,7 @@ import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { PageHeader, SectionContainer } from "@/components/ui/SectionContainer";
-import { StatCard } from "@/components/ui/StatCard";
+import { StatCard, StatStrip } from "@/components/ui/StatCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PerformanceSplitCard } from "@/components/players/PerformanceSplitCard";
@@ -178,13 +178,15 @@ export function PlayerDetailScreen({ route, navigation }: Props) {
       {ps && (
         <>
           <SectionContainer title="Performance Overview" subtitle={`Based on ${ps.total_games} games analyzed`}>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              <StatCard label="Games" value={ps.total_games} />
-              <StatCard label="Wins" value={ps.wins} variant="success" />
-              <StatCard label="Draws" value={ps.draws} variant="warning" />
-              <StatCard label="Losses" value={ps.losses} variant="danger" />
-              <StatCard label="Win Rate" value={`${ps.win_rate}%`} variant={ps.win_rate >= 50 ? "success" : "danger"} />
-            </View>
+            <StatStrip
+              items={[
+                { label: "Games", value: ps.total_games },
+                { label: "Wins", value: ps.wins, variant: "success" },
+                { label: "Draws", value: ps.draws, variant: "warning" },
+                { label: "Losses", value: ps.losses, variant: "danger" },
+                { label: "Win Rate", value: `${ps.win_rate}%`, variant: ps.win_rate >= 50 ? "success" : "danger" },
+              ]}
+            />
             {ps.summary_text && (
               <Card style={{ padding: 16, marginTop: 12 }}>
                 <Text style={{ fontSize: 13, color: t.textMuted, lineHeight: 19 }}>{ps.summary_text}</Text>
