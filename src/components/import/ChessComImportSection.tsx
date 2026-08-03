@@ -1,0 +1,150 @@
+import { useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
+import { api } from "@/lib/api";
+import { useTheme } from "@/theme/ThemeContext";
+import { Button } from "@/components/ui/Button";
+import { ConnectedAccountManager } from "./ConnectedAccountManager";
+import { ImportResultPanel } from "./ImportResultPanel";
+import type { ChessComImportResult, PGNImportResult, PlayerAccount } from "@/types";
+
+const LIMITS = [25, 50, 100, 200];
+const CC_COLOR = "#7fa650";
+
+type Status = "idle" | "loading" | "success" | "error";
+
+export function ChessComImportSection({
+  slug,
+  accounts = [],
+  onUpdated,
+}: {
+  slug: string;
+  accounts?: PlayerAccount[];
+  onUpdated?: () => void | Promise<void>;
+}) {
+  const t = useTheme();
+  const chesscomAccounts = accounts.filter((a) => a.platform === "chesscom");
+  const [username, setUsername] = useState(chesscomAccounts[0]?.username || "");
+  const [limit, setLimit] = useState(50);
+  const [status, setStatus] = useState<Status>("idle");
+  const [result, setResult] = useState<ChessComImportResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const canSubmit = username.trim().length > 0 && status !== "loading";
+
+  async function handleImport() {
+    if (!canSubmit) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setStatus("loading");
+    setResult(null);
+    setErrorMsg(null);
+    try {
+      const data = await api.importFromChessCom(slug, { username: username.trim(), limit }, controller.signal);
+      setResult(data);
+      setStatus("success");
+      await onUpdated?.();
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      setErrorMsg(err instanceof Error ? err.message : "Import failed. Check the username and try again.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <View>
+      <View style={[st.card, { borderColor: "rgba(127,166,80,0.35)", backgroundColor: "rgba(127,166,80,0.06)" }]}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <View style={[st.iconBox, { backgroundColor: CC_COLOR }]}>
+            <Ionicons name="logo-buffer" size={18} color="#fff" />
+          </View>
+          <View>
+            <Text style={{ fontWeight: "700", color: t.text, fontSize: 14 }}>Import from Chess.com</Text>
+            <Text style={{ fontSize: 11, color: t.textMuted }}>Fetch the opponent's recent public games</Text>
+          </View>
+        </View>
+
+        {chesscomAccounts.length > 1 && (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {chesscomAccounts.map((a) => (
+              <Pressable
+                key={a.id}
+                onPress={() => { setUsername(a.username); setResult(null); setStatus("idle"); }}
+                style={[st.accountChip, username === a.username ? { backgroundColor: CC_COLOR, borderColor: CC_COLOR } : { borderColor: t.border }]}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "600", color: username === a.username ? "#fff" : t.textMuted }}>{a.username}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted, marginBottom: 6 }}>Chess.com username</Text>
+        <TextInput
+          value={username}
+          onChangeText={(v) => { setUsername(v); setResult(null); setErrorMsg(null); setStatus("idle"); }}
+          placeholder="e.g. hikaru"
+          placeholderTextColor={t.textFaint}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={[st.input, { borderColor: t.border, color: t.text, backgroundColor: t.surface }]}
+        />
+
+        <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted, marginTop: 12, marginBottom: 6 }}>Games to fetch</Text>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {LIMITS.map((l) => (
+            <Pressable key={l} onPress={() => setLimit(l)} style={[st.limitChip, limit === l ? { backgroundColor: CC_COLOR, borderColor: CC_COLOR } : { borderColor: t.border }]}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: limit === l ? "#fff" : t.textMuted }}>{l}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 }}>
+          <Pressable onPress={handleImport} disabled={!canSubmit} style={[st.submitBtn, { backgroundColor: CC_COLOR, opacity: !canSubmit ? 0.5 : 1 }]}>
+            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+              {status === "loading" ? "Fetching games…" : "Import from Chess.com"}
+            </Text>
+          </Pressable>
+          {status === "loading" && (
+            <Pressable onPress={() => { abortRef.current?.abort(); setStatus("idle"); }}>
+              <Text style={{ fontSize: 12, color: t.textMuted }}>Cancel</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {status === "error" && errorMsg && (
+          <View style={[st.errorBox, { backgroundColor: t.dangerBg, borderColor: t.dangerBorder }]}>
+            <Text style={{ color: t.danger, fontSize: 12 }}>{errorMsg}</Text>
+          </View>
+        )}
+
+        {status === "success" && result && (
+          <View style={{ marginTop: 14 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              <View style={[st.metaPill, { backgroundColor: t.elevated }]}>
+                <Text style={{ fontSize: 11, color: t.textMuted }}>{result.fetch_meta.games_fetched} fetched</Text>
+              </View>
+              <View style={[st.metaPill, { backgroundColor: t.elevated }]}>
+                <Text style={{ fontSize: 11, color: t.textMuted }}>{result.fetch_meta.archives_visited} months scanned</Text>
+              </View>
+            </View>
+            <ImportResultPanel result={result as unknown as PGNImportResult} />
+          </View>
+        )}
+      </View>
+      <ConnectedAccountManager slug={slug} platform="chesscom" accounts={accounts} onUpdated={onUpdated} />
+    </View>
+  );
+}
+
+const st = StyleSheet.create({
+  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 16 },
+  iconBox: { height: 36, width: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  accountChip: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 14 },
+  limitChip: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  submitBtn: { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12 },
+  errorBox: { marginTop: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 10 },
+  metaPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+});
