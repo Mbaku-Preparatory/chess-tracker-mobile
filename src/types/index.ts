@@ -481,38 +481,6 @@ export interface PrepTrend {
   confidence: "high" | "medium";
 }
 
-// ── Tournament Mode ───────────────────────────────────────────────────────────
-
-export interface TournamentPlayer {
-  snr: string;
-  name: string;
-  rating: number | null;
-  federation: string | null;
-  fide_id: string | null;
-  rank: number | null;
-  score: number | null;
-  player_url: string;
-}
-
-export interface Pairing {
-  id: number;
-  round_number: number;
-  opponent_name: string;
-  color: "white" | "black" | "";
-  result: "win" | "draw" | "loss" | "";
-  created_at: string;
-}
-
-export interface Tournament {
-  id: number;
-  name: string;
-  url: string;
-  is_active: boolean;
-  players_data: TournamentPlayer[];
-  pairings: Pairing[];
-  created_at: string;
-}
-
 export interface PrepSummary {
   meta: {
     total_games: number;

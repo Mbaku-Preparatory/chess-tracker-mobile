@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListSkeleton } from "@/components/ui/LoadingSkeleton";
 import { PlayerCard } from "@/components/players/PlayerCard";
-import { TournamentPanel } from "@/components/tournament/TournamentPanel";
 import type { RootStackParamList } from "@/navigation/types";
 import type { Player } from "@/types";
 
@@ -65,8 +64,6 @@ export function PlayersScreen() {
               subtitle={total ? `${total} opponent${total === 1 ? "" : "s"} tracked` : undefined}
               actions={<Button title="+ Add Opponent" size="sm" onPress={() => navigation.navigate("PlayerNew")} />}
             />
-
-            <TournamentPanel />
 
             <SearchInput
               placeholder="Search by name or federation…"

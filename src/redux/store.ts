@@ -6,7 +6,6 @@ import playerDetailReducer from "./features/playerDetail";
 import playersReducer from "./features/players";
 import repertoireReducer from "./features/repertoire";
 import themeReducer from "./features/theme";
-import tournamentReducer from "./features/tournament";
 
 import {
   authMiddleware,
@@ -14,7 +13,6 @@ import {
   playerDetailMiddleware,
   playersMiddleware,
   repertoireMiddleware,
-  tournamentMiddleware,
 } from "./middleware";
 
 export const store = configureStore({
@@ -25,7 +23,6 @@ export const store = configureStore({
     games: gamesReducer,
     repertoire: repertoireReducer,
     theme: themeReducer,
-    tournament: tournamentReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false }).concat(
@@ -33,8 +30,7 @@ export const store = configureStore({
       playersMiddleware,
       playerDetailMiddleware,
       gamesMiddleware,
-      repertoireMiddleware,
-      tournamentMiddleware
+      repertoireMiddleware
     ),
 });
 

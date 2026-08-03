@@ -3,4 +3,3 @@ export { gamesMiddleware } from "./games";
 export { playerDetailMiddleware } from "./playerDetail";
 export { playersMiddleware } from "./players";
 export { repertoireMiddleware } from "./repertoire";
-export { tournamentMiddleware } from "./tournament";

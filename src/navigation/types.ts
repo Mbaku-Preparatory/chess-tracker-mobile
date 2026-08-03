@@ -8,6 +8,5 @@ export type RootStackParamList = {
   PlayerPrep: { slug: string };
   PlayerImport: { slug: string; source?: "chesscom" | "lichess" | "chess_results" | "pgn" };
   MasterGames: undefined;
-  TournamentPlayers: undefined;
   Setup: undefined;
 };

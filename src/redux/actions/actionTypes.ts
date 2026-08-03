@@ -37,15 +37,6 @@ export const COMPLETE_ONBOARDING = "repertoire/completeOnboarding";
 export const RESET_REPERTOIRE = "repertoire/reset";
 export const SET_REPERTOIRE_INITIALIZED = "repertoire/setInitialized";
 
-// ── Tournament ────────────────────────────────────────
-export const FETCH_ACTIVE_TOURNAMENT = "tournament/fetchActive";
-export const FETCH_ACTIVE_TOURNAMENT_PENDING = "tournament/fetchActive_pending";
-export const CREATE_TOURNAMENT = "tournament/create";
-export const CREATE_TOURNAMENT_PENDING = "tournament/create_pending";
-export const UPSERT_PAIRING = "tournament/upsertPairing";
-export const CLOSE_TOURNAMENT = "tournament/close";
-export const CLEAR_TOURNAMENT_ERROR = "tournament/clearError";
-
 // ── Theme ─────────────────────────────────────────────
 export const LOAD_THEME = "theme/load";
 export const SET_COLOR_SCHEME = "theme/setColorScheme";
