@@ -1,7 +1,13 @@
+export type MainTabParamList = {
+  Schedule: undefined;
+  Players: undefined;
+};
+
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   VerifyEmail: { email: string };
+  MainTabs: undefined;
   Players: undefined;
   PlayerNew: undefined;
   PlayerDetail: { slug: string };

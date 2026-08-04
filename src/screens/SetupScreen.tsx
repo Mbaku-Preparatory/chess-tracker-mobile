@@ -123,7 +123,7 @@ export function SetupScreen({ navigation }: Props) {
     dispatch(completeOnboarding());
     await dispatch(saveRepertoire());
     if (isEditing) navigation.goBack();
-    else navigation.replace("Players");
+    else navigation.replace("MainTabs");
   }
 
   return (

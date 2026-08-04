@@ -1,16 +1,19 @@
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { loadAuthFromStorage } from "@/redux/actions/auth";
 import { fetchRepertoire, setInitialized } from "@/redux/actions/repertoire";
 import { useTheme } from "@/theme/ThemeContext";
-import type { RootStackParamList } from "./types";
+import type { MainTabParamList, RootStackParamList } from "./types";
 
 import { LoginScreen } from "@/screens/LoginScreen";
 import { SignupScreen } from "@/screens/SignupScreen";
 import { VerifyEmailScreen } from "@/screens/VerifyEmailScreen";
+import { SchedulerScreen } from "@/screens/SchedulerScreen";
 import { PlayersScreen } from "@/screens/PlayersScreen";
 import { PlayerNewScreen } from "@/screens/PlayerNewScreen";
 import { PlayerDetailScreen } from "@/screens/PlayerDetailScreen";
@@ -21,6 +24,34 @@ import { MasterGamesScreen } from "@/screens/MasterGamesScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
+
+const TAB_ICONS: Record<keyof MainTabParamList, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
+  Schedule: { active: "today", inactive: "today-outline" },
+  Players: { active: "people", inactive: "people-outline" },
+};
+
+function MainTabs() {
+  const t = useTheme();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: t.brand(600),
+        tabBarInactiveTintColor: t.textMuted,
+        tabBarStyle: { backgroundColor: t.surface, borderTopColor: t.border },
+        tabBarIcon: ({ focused, color, size }) => {
+          const icons = TAB_ICONS[route.name];
+          return <Ionicons name={focused ? icons.active : icons.inactive} size={size} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="Schedule" component={SchedulerScreen} />
+      <Tab.Screen name="Players" component={PlayersScreen} options={{ tabBarLabel: "Prep" }} />
+    </Tab.Navigator>
+  );
+}
 
 export function RootNavigator() {
   const t = useTheme();
@@ -53,7 +84,7 @@ export function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
         <Stack.Group>
-          <Stack.Screen name="Players" component={PlayersScreen} />
+          <Stack.Screen name="MainTabs" component={MainTabs} />
           <Stack.Screen name="PlayerNew" component={PlayerNewScreen} />
           <Stack.Screen name="PlayerDetail" component={PlayerDetailScreen} />
           <Stack.Screen name="PlayerGames" component={PlayerGamesScreen} />
