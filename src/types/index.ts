@@ -481,6 +481,18 @@ export interface PrepTrend {
   confidence: "high" | "medium";
 }
 
+export interface PrepSession {
+  id: number;
+  title: string;
+  notes: string;
+  scheduled_for: string; // "YYYY-MM-DD"
+  scheduled_time: string | null; // "HH:MM:SS"
+  duration_minutes: number | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PrepSummary {
   meta: {
     total_games: number;

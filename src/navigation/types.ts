@@ -16,4 +16,5 @@ export type RootStackParamList = {
   PlayerImport: { slug: string; source?: "chesscom" | "lichess" | "chess_results" | "pgn" };
   MasterGames: undefined;
   Setup: undefined;
+  SessionNew: undefined;
 };

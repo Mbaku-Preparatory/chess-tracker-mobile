@@ -4,6 +4,7 @@ import authReducer from "./features/auth";
 import gamesReducer from "./features/games";
 import playerDetailReducer from "./features/playerDetail";
 import playersReducer from "./features/players";
+import prepSessionsReducer from "./features/prepSessions";
 import repertoireReducer from "./features/repertoire";
 import themeReducer from "./features/theme";
 
@@ -12,6 +13,7 @@ import {
   gamesMiddleware,
   playerDetailMiddleware,
   playersMiddleware,
+  prepSessionsMiddleware,
   repertoireMiddleware,
 } from "./middleware";
 
@@ -21,6 +23,7 @@ export const store = configureStore({
     players: playersReducer,
     playerDetail: playerDetailReducer,
     games: gamesReducer,
+    prepSessions: prepSessionsReducer,
     repertoire: repertoireReducer,
     theme: themeReducer,
   },
@@ -30,6 +33,7 @@ export const store = configureStore({
       playersMiddleware,
       playerDetailMiddleware,
       gamesMiddleware,
+      prepSessionsMiddleware,
       repertoireMiddleware
     ),
 });

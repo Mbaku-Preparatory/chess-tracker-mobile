@@ -22,6 +22,7 @@ import type {
   PlayerDetail,
   PlayerInsights,
   PlayerLookupResult,
+  PrepSession,
   PrepSummary,
   RepertoireData,
 } from "@/types";
@@ -456,5 +457,38 @@ export const api = {
 
   deletePlayer(slug: string): Promise<void> {
     return fetchJson(`${API_BASE}/players/${slug}/`, { method: "DELETE" });
+  },
+
+  // ── Prep sessions (Schedule) ──────────────────────────────────────────────
+
+  async getPrepSessions(): Promise<PrepSession[]> {
+    const response = await fetchJson<PaginatedResponse<PrepSession>>(`${API_BASE}/prep-sessions/`);
+    return response.results;
+  },
+
+  createPrepSession(payload: {
+    title: string;
+    notes?: string;
+    scheduled_for: string;
+    scheduled_time?: string | null;
+    duration_minutes?: number | null;
+  }): Promise<PrepSession> {
+    return fetchJson(`${API_BASE}/prep-sessions/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updatePrepSession(id: number, payload: { completed_at: string | null }): Promise<PrepSession> {
+    return fetchJson(`${API_BASE}/prep-sessions/${id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deletePrepSession(id: number): Promise<void> {
+    return fetchJson(`${API_BASE}/prep-sessions/${id}/`, { method: "DELETE" });
   },
 };

@@ -40,3 +40,12 @@ export const SET_REPERTOIRE_INITIALIZED = "repertoire/setInitialized";
 // ── Theme ─────────────────────────────────────────────
 export const LOAD_THEME = "theme/load";
 export const SET_COLOR_SCHEME = "theme/setColorScheme";
+
+// ── Prep Sessions (Schedule) ──────────────────────────
+export const FETCH_PREP_SESSIONS = "prepSessions/fetch";
+export const FETCH_PREP_SESSIONS_PENDING = "prepSessions/fetch_pending";
+export const UPDATE_PREP_SESSION = "prepSessions/update";
+export const UPDATE_PREP_SESSION_PENDING = "prepSessions/update_pending";
+export const DELETE_PREP_SESSION = "prepSessions/delete";
+export const DELETE_PREP_SESSION_PENDING = "prepSessions/delete_pending";
+export const ADD_PREP_SESSION = "prepSessions/add";
