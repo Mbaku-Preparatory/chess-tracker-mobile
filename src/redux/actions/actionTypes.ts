@@ -40,6 +40,7 @@ export const SET_REPERTOIRE_INITIALIZED = "repertoire/setInitialized";
 // ── Theme ─────────────────────────────────────────────
 export const LOAD_THEME = "theme/load";
 export const SET_COLOR_SCHEME = "theme/setColorScheme";
+export const SET_APPEARANCE = "theme/setAppearance";
 
 // ── Prep Sessions (Schedule) ──────────────────────────
 export const FETCH_PREP_SESSIONS = "prepSessions/fetch";

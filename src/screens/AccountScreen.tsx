@@ -1,11 +1,11 @@
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import Constants from "expo-constants";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { sendTestNotification } from "@/lib/notifications";
+import { APP_VERSION, BUILD_NUMBER } from "@/lib/appVersion";
 import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
 import { Button } from "@/components/ui/Button";
@@ -14,9 +14,6 @@ import type { RootStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Account">;
-
-const APP_VERSION = Constants.expoConfig?.version ?? "unknown";
-const BUILD_NUMBER = Constants.expoConfig?.android?.versionCode ?? null;
 
 function ReadOnlyRow({ label, value }: { label: string; value: string }) {
   const t = useTheme();

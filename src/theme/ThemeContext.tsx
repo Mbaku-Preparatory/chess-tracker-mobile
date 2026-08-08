@@ -57,10 +57,11 @@ function buildTheme(mode: "light" | "dark", vars: Record<string, string>): AppTh
 const ThemeCtx = createContext<AppTheme>(buildTheme("light", getThemeVars("ocean")));
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { colorScheme, customColor } = useAppSelector((s) => s.theme);
-  // Follows the OS setting directly - there is no in-app override, so this
-  // stays in sync automatically if the user changes it at the system level.
-  const mode = useColorScheme() === "dark" ? "dark" : "light";
+  const { colorScheme, customColor, appearance } = useAppSelector((s) => s.theme);
+  // useColorScheme() is called unconditionally - it's a hook, so it can't sit behind the
+  // "system" branch - and only consulted when the user hasn't picked an explicit mode.
+  const systemMode = useColorScheme() === "dark" ? "dark" : "light";
+  const mode = appearance === "system" ? systemMode : appearance;
   const vars = useMemo(() => getThemeVars(colorScheme, customColor), [colorScheme, customColor]);
   const theme = useMemo(() => buildTheme(mode, vars), [mode, vars]);
   return <ThemeCtx.Provider value={theme}>{children}</ThemeCtx.Provider>;

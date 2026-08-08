@@ -13,6 +13,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { ListSkeleton } from "@/components/ui/LoadingSkeleton";
 import { PrepSessionCard } from "@/components/schedule/PrepSessionCard";
+import { ScheduleIntroCard } from "@/components/schedule/ScheduleIntroCard";
+import { onboardingStorage } from "@/lib/onboardingStorage";
 import { computeStreak } from "@/utils/streak";
 import { getSessionSection, type ScheduleSection } from "@/utils/schedule";
 import { ensureDefaultChannel, reconcilePrepSessionReminders, requestNotificationPermissions } from "@/lib/notifications";
@@ -36,6 +38,22 @@ export function SchedulerScreen() {
   );
 
   const [remindersBlocked, setRemindersBlocked] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    onboardingStorage.hasSeenScheduleIntro().then((seen) => {
+      if (!cancelled && !seen) setShowIntro(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function dismissIntro() {
+    setShowIntro(false);
+    void onboardingStorage.markScheduleIntroSeen();
+  }
 
   // Permission is awaited *before* reconciling rather than requested in a separate effect. As two
   // independent effects these raced, and on Android 13+ scheduling without POST_NOTIFICATIONS
@@ -94,6 +112,7 @@ export function SchedulerScreen() {
                 </>
               }
             />
+            {showIntro && <ScheduleIntroCard onDismiss={dismissIntro} />}
             {remindersBlocked && (
               <View style={{ borderWidth: 1, borderColor: t.border, backgroundColor: t.warningBg, borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
                 <Ionicons name="notifications-off-outline" size={18} color={t.warning} />
