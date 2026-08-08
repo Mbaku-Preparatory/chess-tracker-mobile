@@ -115,7 +115,7 @@ export function PlayerDetailScreen({ route, navigation }: Props) {
       <Screen>
         <View style={{ alignItems: "center", paddingVertical: 60, gap: 16 }}>
           <Text style={{ color: t.text, fontSize: 16, fontWeight: "700" }}>{error || "Player not found"}</Text>
-          <Button title="Back to players" onPress={() => navigation.navigate("Players")} />
+          <Button title="Back to players" onPress={() => navigation.navigate("MainTabs", { screen: "Players" })} />
         </View>
       </Screen>
     );

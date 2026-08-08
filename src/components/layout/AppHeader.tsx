@@ -57,18 +57,18 @@ export function AppHeader() {
   return (
     <>
       <View style={[st.bar, { borderColor: t.border, backgroundColor: t.surface }]}>
-        <Pressable style={st.brand} onPress={() => navigation.navigate("Players")}>
+        <Pressable style={st.brand} onPress={() => navigation.navigate("MainTabs", { screen: "Players" })}>
           <Logo size={34} />
         </Pressable>
 
         <View style={st.actions}>
-          <TouchableOpacity onPress={() => navigation.navigate("Players")} style={st.navBtn}>
+          <TouchableOpacity onPress={() => navigation.navigate("MainTabs", { screen: "Players" })} style={st.navBtn} hitSlop={8}>
             <Ionicons name="people-outline" size={20} color={t.textMuted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("MasterGames")} style={st.navBtn}>
+          <TouchableOpacity onPress={() => navigation.navigate("MasterGames")} style={st.navBtn} hitSlop={8}>
             <Ionicons name="library-outline" size={20} color={t.textMuted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuOpen(true)} style={st.avatarBtn}>
+          <TouchableOpacity onPress={() => setMenuOpen(true)} style={st.avatarBtn} hitSlop={8}>
             {profilePic ? (
               <Image source={{ uri: profilePic }} style={st.avatarImg} />
             ) : (
@@ -143,6 +143,8 @@ const st = StyleSheet.create({
   },
   brand: { flexDirection: "row", alignItems: "center" },
   actions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  // 20px icon + 8 padding = a 36px target, under Android's 48dp minimum; hitSlop on
+  // each button widens the touchable area without changing the visual layout.
   navBtn: { padding: 8 },
   avatarBtn: { marginLeft: 6 },
   avatarImg: { height: 32, width: 32, borderRadius: 16 },
