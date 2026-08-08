@@ -168,8 +168,10 @@ export function PlayerNewScreen({ navigation }: Props) {
       const { results } = await api.lookupPlayer("fide", q);
       if (results.length === 0) setFideError(`No FIDE player found for "${q}".`);
       else setFideResults(results);
-    } catch {
-      setFideError("FIDE search failed. Try again.");
+    } catch (err) {
+      // The API explains short queries and FIDE outages — pass that through
+      // rather than flattening both to "try again".
+      setFideError(err instanceof Error ? err.message : "FIDE search failed. Try again.");
     } finally {
       setFideSearching(false);
     }
