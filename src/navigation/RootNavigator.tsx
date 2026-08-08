@@ -24,6 +24,7 @@ import { MasterGamesScreen } from "@/screens/MasterGamesScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { SessionNewScreen } from "@/screens/SessionNewScreen";
 import { SessionDetailScreen } from "@/screens/SessionDetailScreen";
+import { AccountScreen } from "@/screens/AccountScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -49,8 +50,11 @@ function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="Schedule" component={SchedulerScreen} />
+      {/* Prep is listed first because a bottom navigator opens on its first screen, and Prep -
+          not Schedule - is the app's primary destination. The route name stays "Players" so the
+          existing navigate("Players") call sites keep working. */}
       <Tab.Screen name="Players" component={PlayersScreen} options={{ tabBarLabel: "Prep" }} />
+      <Tab.Screen name="Schedule" component={SchedulerScreen} />
     </Tab.Navigator>
   );
 }
@@ -96,6 +100,7 @@ export function RootNavigator() {
           <Stack.Screen name="Setup" component={SetupScreen} />
           <Stack.Screen name="SessionNew" component={SessionNewScreen} />
           <Stack.Screen name="SessionDetail" component={SessionDetailScreen} />
+          <Stack.Screen name="Account" component={AccountScreen} />
         </Stack.Group>
       ) : (
         <Stack.Group>

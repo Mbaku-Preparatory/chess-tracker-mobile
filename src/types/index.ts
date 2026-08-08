@@ -516,3 +516,12 @@ export interface PrepSummary {
   };
   trends: PrepTrend[];
 }
+
+/** The signed-in user's own account, from /api/auth/me/. */
+export interface UserProfile {
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  date_joined: string;
+}

@@ -24,6 +24,7 @@ import type {
   PlayerLookupResult,
   PrepSession,
   PrepSummary,
+  UserProfile,
   RepertoireData,
 } from "@/types";
 import { authStorage } from "@/lib/auth";
@@ -366,6 +367,18 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
+    });
+  },
+
+  me(): Promise<UserProfile> {
+    return fetchJson(`${API_BASE}/auth/me/`);
+  },
+
+  updateMe(firstName: string, lastName: string): Promise<UserProfile> {
+    return fetchJson(`${API_BASE}/auth/me/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ first_name: firstName, last_name: lastName }),
     });
   },
 

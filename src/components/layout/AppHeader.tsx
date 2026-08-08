@@ -102,6 +102,14 @@ export function AppHeader() {
                 <ThemePicker />
               </View>
 
+              <TouchableOpacity
+                style={[st.menuItem, { borderColor: t.border }]}
+                onPress={() => { setMenuOpen(false); navigation.navigate("Account"); }}
+              >
+                <Ionicons name="person-circle-outline" size={17} color={t.textMuted} />
+                <Text style={{ color: t.text, fontSize: 14 }}>Account</Text>
+              </TouchableOpacity>
+
               {initialized && (
                 <TouchableOpacity
                   style={[st.menuItem, { borderColor: t.border }]}

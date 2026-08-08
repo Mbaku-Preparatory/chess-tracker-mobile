@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -34,12 +35,22 @@ export function SchedulerScreen() {
     }, [dispatch])
   );
 
-  useEffect(() => {
-    requestNotificationPermissions();
-  }, []);
+  const [remindersBlocked, setRemindersBlocked] = useState(false);
 
+  // Permission is awaited *before* reconciling rather than requested in a separate effect. As two
+  // independent effects these raced, and on Android 13+ scheduling without POST_NOTIFICATIONS
+  // resolves successfully while delivering nothing - so reminders silently never arrived.
   useEffect(() => {
-    ensureDefaultChannel().then(() => reconcilePrepSessionReminders(items));
+    let cancelled = false;
+    (async () => {
+      await requestNotificationPermissions();
+      await ensureDefaultChannel();
+      const result = await reconcilePrepSessionReminders(items);
+      if (!cancelled) setRemindersBlocked(!result.permitted);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [items]);
 
   const streak = useMemo(() => computeStreak(items), [items]);
@@ -83,6 +94,20 @@ export function SchedulerScreen() {
                 </>
               }
             />
+            {remindersBlocked && (
+              <View style={{ borderWidth: 1, borderColor: t.border, backgroundColor: t.warningBg, borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                <Ionicons name="notifications-off-outline" size={18} color={t.warning} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: t.text, fontSize: 13, fontWeight: "600" }}>
+                    Reminders are turned off
+                  </Text>
+                  <Text style={{ color: t.textMuted, fontSize: 12, marginTop: 2 }}>
+                    Notifications are blocked for this app, so scheduled sessions won&apos;t alert you.
+                    Enable them in Settings › Apps › Mbaku Preparatory › Notifications.
+                  </Text>
+                </View>
+              </View>
+            )}
             {error && (
               <View style={{ borderWidth: 1, borderColor: t.dangerBorder, backgroundColor: t.dangerBg, borderRadius: 10, padding: 12, marginBottom: 12 }}>
                 <Text style={{ color: t.danger, fontSize: 13 }}>{error}</Text>
