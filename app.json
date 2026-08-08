@@ -46,6 +46,12 @@
           "color": "#0074C5"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c3490fef-32cd-432d-a970-a3624c6af2b8"
+      }
+    },
+    "owner": "cliffordombiro"
   }
 }
