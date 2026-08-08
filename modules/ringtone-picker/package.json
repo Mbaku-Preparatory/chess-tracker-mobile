@@ -1,0 +1,13 @@
+{
+  "name": "ringtone-picker",
+  "version": "0.1.0",
+  "description": "Local Expo module: launches the Android system ringtone picker and creates notification channels bound to a picked sound URI.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {},
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

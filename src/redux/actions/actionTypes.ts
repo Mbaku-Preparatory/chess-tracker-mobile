@@ -49,3 +49,4 @@ export const UPDATE_PREP_SESSION_PENDING = "prepSessions/update_pending";
 export const DELETE_PREP_SESSION = "prepSessions/delete";
 export const DELETE_PREP_SESSION_PENDING = "prepSessions/delete_pending";
 export const ADD_PREP_SESSION = "prepSessions/add";
+export const REPLACE_PREP_SESSION = "prepSessions/replace";

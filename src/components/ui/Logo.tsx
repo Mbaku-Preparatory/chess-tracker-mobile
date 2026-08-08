@@ -1,0 +1,30 @@
+import React from "react";
+import type { StyleProp, ViewStyle } from "react-native";
+import Svg, { Rect, Path } from "react-native-svg";
+
+/**
+ * The Mbaku Preparatory brand mark.
+ *
+ * One source of truth with the web apps: identical geometry to
+ * chess-tracker-frontend/src/app/icon.svg and sales-panel/public/logo.svg, and
+ * to the generated launcher icons in assets/. The "MP" is baked into outlines
+ * rather than drawn as text — SVG used as an image can't load webfonts, and a
+ * <Text>MP</Text> renders in whatever system font the device happens to have,
+ * which is how the five previous hand-rolled copies of this mark drifted apart.
+ *
+ * Regenerate from assets/logo.svg if the mark changes; don't hand-edit the path.
+ */
+export default function Logo({
+  size = 32,
+  style,
+}: {
+  size?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64" style={style}>
+      <Rect x={4} y={4} width={56} height={56} rx={14} fill="#0074C5" />
+      <Path d="M14.79 40.73V23.27H20.29L23.11 31.29Q23.29 31.84 23.52 32.74Q23.75 33.63 23.98 34.66Q24.22 35.69 24.42 36.66Q24.63 37.63 24.76 38.35H24.06Q24.2 37.65 24.4 36.68Q24.6 35.72 24.84 34.69Q25.08 33.65 25.3 32.75Q25.53 31.85 25.71 31.29L28.5 23.27H34V40.73H30.41V32.5Q30.41 31.93 30.43 31.07Q30.45 30.22 30.47 29.23Q30.5 28.24 30.52 27.24Q30.55 26.23 30.55 25.35H30.79Q30.56 26.32 30.29 27.35Q30.01 28.39 29.74 29.36Q29.47 30.34 29.22 31.15Q28.97 31.96 28.8 32.5L25.91 40.73H22.89L19.96 32.5Q19.78 31.97 19.53 31.16Q19.29 30.36 19.01 29.39Q18.73 28.42 18.45 27.38Q18.17 26.34 17.92 25.35H18.2Q18.21 26.19 18.23 27.19Q18.26 28.18 18.28 29.18Q18.31 30.18 18.33 31.04Q18.35 31.91 18.35 32.5V40.73Z M36.15 40.73V23.27H42.96Q44.95 23.27 46.35 24.03Q47.74 24.78 48.47 26.11Q49.21 27.44 49.21 29.17Q49.21 30.9 48.46 32.21Q47.72 33.53 46.31 34.28Q44.89 35.03 42.88 35.03H38.5V32.14H42.31Q43.4 32.14 44.12 31.76Q44.83 31.38 45.17 30.71Q45.52 30.04 45.52 29.17Q45.52 28.28 45.17 27.62Q44.83 26.96 44.11 26.59Q43.4 26.22 42.3 26.22H39.73V40.73Z" fill="#ffffff" />
+    </Svg>
+  );
+}

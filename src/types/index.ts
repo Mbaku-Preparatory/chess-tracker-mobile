@@ -489,6 +489,8 @@ export interface PrepSession {
   scheduled_time: string | null; // "HH:MM:SS"
   duration_minutes: number | null;
   completed_at: string | null;
+  reminder_sound_uri: string;
+  reminder_sound_name: string;
   created_at: string;
   updated_at: string;
 }

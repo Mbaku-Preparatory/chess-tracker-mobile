@@ -11,6 +11,7 @@ import { clearAuth, setProfilePic } from "@/redux/actions/auth";
 import { useTheme } from "@/theme/ThemeContext";
 import { ThemePicker } from "@/components/ui/ThemePicker";
 import type { RootStackParamList } from "@/navigation/types";
+import Logo from "../ui/Logo";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -57,9 +58,7 @@ export function AppHeader() {
     <>
       <View style={[st.bar, { borderColor: t.border, backgroundColor: t.surface }]}>
         <Pressable style={st.brand} onPress={() => navigation.navigate("Players")}>
-          <View style={[st.logo, { backgroundColor: t.brand(600) }]}>
-            <Text style={st.logoText}>MP</Text>
-          </View>
+          <Logo size={34} />
         </Pressable>
 
         <View style={st.actions}>
@@ -135,8 +134,6 @@ const st = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   brand: { flexDirection: "row", alignItems: "center" },
-  logo: { height: 34, width: 34, borderRadius: 9, alignItems: "center", justifyContent: "center" },
-  logoText: { color: "#fff", fontWeight: "800", fontSize: 14 },
   actions: { flexDirection: "row", alignItems: "center", gap: 4 },
   navBtn: { padding: 8 },
   avatarBtn: { marginLeft: 6 },

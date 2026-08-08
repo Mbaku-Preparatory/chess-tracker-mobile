@@ -17,4 +17,5 @@ export type RootStackParamList = {
   MasterGames: undefined;
   Setup: undefined;
   SessionNew: undefined;
+  SessionDetail: { id: number };
 };

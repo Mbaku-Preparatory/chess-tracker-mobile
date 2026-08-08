@@ -1,10 +1,15 @@
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useTheme } from "@/theme/ThemeContext";
 import { Card } from "@/components/ui/Card";
 import { formatSessionDate, formatSessionTime } from "@/utils/schedule";
+import type { RootStackParamList } from "@/navigation/types";
 import type { PrepSession } from "@/types";
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export function PrepSessionCard({
   session,
@@ -16,6 +21,7 @@ export function PrepSessionCard({
   onDelete: (session: PrepSession) => void;
 }) {
   const t = useTheme();
+  const navigation = useNavigation<Nav>();
   const completed = !!session.completed_at;
 
   const metaParts = [
@@ -47,7 +53,10 @@ export function PrepSessionCard({
           {completed && <Ionicons name="checkmark" size={16} color="#ffffff" />}
         </Pressable>
 
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <Pressable
+          style={{ flex: 1, minWidth: 0 }}
+          onPress={() => navigation.navigate("SessionDetail", { id: session.id })}
+        >
           <Text
             style={[
               st.title,
@@ -63,7 +72,7 @@ export function PrepSessionCard({
               {session.notes}
             </Text>
           ) : null}
-        </View>
+        </Pressable>
 
         <Pressable onPress={confirmDelete} style={st.deleteBtn}>
           <Ionicons name="trash-outline" size={16} color={t.textFaint} />

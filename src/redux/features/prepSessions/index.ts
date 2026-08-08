@@ -4,6 +4,7 @@ import {
   DELETE_PREP_SESSION,
   FETCH_PREP_SESSIONS,
   FETCH_PREP_SESSIONS_PENDING,
+  REPLACE_PREP_SESSION,
   UPDATE_PREP_SESSION,
 } from "@/redux/actions/actionTypes";
 
@@ -50,6 +51,12 @@ const prepSessionsReducer = (state = initialState, action: any): PrepSessionsSta
 
     case ADD_PREP_SESSION:
       return { ...state, items: [action.payload, ...state.items] };
+
+    case REPLACE_PREP_SESSION:
+      return {
+        ...state,
+        items: state.items.map((item) => (item.id === action.payload.id ? action.payload : item)),
+      };
 
     default:
       return state;

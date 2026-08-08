@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { SectionList, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -14,6 +14,7 @@ import { ListSkeleton } from "@/components/ui/LoadingSkeleton";
 import { PrepSessionCard } from "@/components/schedule/PrepSessionCard";
 import { computeStreak } from "@/utils/streak";
 import { getSessionSection, type ScheduleSection } from "@/utils/schedule";
+import { ensureDefaultChannel, reconcilePrepSessionReminders, requestNotificationPermissions } from "@/lib/notifications";
 import type { RootStackParamList } from "@/navigation/types";
 import type { PrepSession } from "@/types";
 
@@ -32,6 +33,14 @@ export function SchedulerScreen() {
       dispatch(fetchPrepSessions());
     }, [dispatch])
   );
+
+  useEffect(() => {
+    requestNotificationPermissions();
+  }, []);
+
+  useEffect(() => {
+    ensureDefaultChannel().then(() => reconcilePrepSessionReminders(items));
+  }, [items]);
 
   const streak = useMemo(() => computeStreak(items), [items]);
 
@@ -91,7 +100,13 @@ export function SchedulerScreen() {
           <View style={{ marginBottom: 10 }}>
             <PrepSessionCard
               session={item}
-              onToggleComplete={(session) => dispatch(updatePrepSession(session.id, !session.completed_at))}
+              onToggleComplete={(session) =>
+                dispatch(
+                  updatePrepSession(session.id, {
+                    completed_at: session.completed_at ? null : new Date().toISOString(),
+                  })
+                )
+              }
               onDelete={(session) => dispatch(deletePrepSession(session.id))}
             />
           </View>

@@ -23,6 +23,7 @@ import { PlayerImportScreen } from "@/screens/PlayerImportScreen";
 import { MasterGamesScreen } from "@/screens/MasterGamesScreen";
 import { SetupScreen } from "@/screens/SetupScreen";
 import { SessionNewScreen } from "@/screens/SessionNewScreen";
+import { SessionDetailScreen } from "@/screens/SessionDetailScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -94,6 +95,7 @@ export function RootNavigator() {
           <Stack.Screen name="MasterGames" component={MasterGamesScreen} />
           <Stack.Screen name="Setup" component={SetupScreen} />
           <Stack.Screen name="SessionNew" component={SessionNewScreen} />
+          <Stack.Screen name="SessionDetail" component={SessionDetailScreen} />
         </Stack.Group>
       ) : (
         <Stack.Group>

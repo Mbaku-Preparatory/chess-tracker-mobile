@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
+import Logo from "../components/ui/Logo";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Signup">;
 
@@ -50,9 +51,7 @@ export function SignupScreen({ navigation }: Props) {
     <View style={[st.container, { backgroundColor: t.bg }]}>
       <View style={{ width: "100%", maxWidth: 360 }}>
         <View style={st.header}>
-          <View style={[st.logo, { backgroundColor: t.brand(600) }]}>
-            <Text style={st.logoText}>MP</Text>
-          </View>
+          <Logo size={48} style={{ marginBottom: 14 }} />
           <Text style={[st.title, { color: t.text }]}>Create your account</Text>
           <Text style={[st.subtitle, { color: t.textMuted }]}>
             Build your repertoire and start scouting opponents.
@@ -139,8 +138,6 @@ export function SignupScreen({ navigation }: Props) {
 const st = StyleSheet.create({
   container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },
   header: { alignItems: "center", marginBottom: 28 },
-  logo: { height: 48, width: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", marginBottom: 14 },
-  logoText: { color: "#fff", fontWeight: "800", fontSize: 18 },
   title: { fontSize: 22, fontWeight: "800", textAlign: "center" },
   subtitle: { marginTop: 4, fontSize: 13, textAlign: "center" },
   errorBox: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 12 },

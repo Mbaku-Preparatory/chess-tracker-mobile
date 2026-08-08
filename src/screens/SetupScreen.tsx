@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import type { RootStackParamList } from "@/navigation/types";
 import type { OpeningResult } from "@/types";
+import Logo from "../components/ui/Logo";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Setup">;
 
@@ -129,9 +130,7 @@ export function SetupScreen({ navigation }: Props) {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg, paddingTop: 60 }}>
       <View style={{ alignItems: "center", marginBottom: 20, paddingHorizontal: 20 }}>
-        <View style={[st.logo, { backgroundColor: t.brand(600) }]}>
-          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 18 }}>MP</Text>
-        </View>
+        <Logo size={48} style={{ marginBottom: 12 }} />
         <Text style={{ fontSize: 20, fontWeight: "800", color: t.text, textAlign: "center" }}>Build your repertoire</Text>
         <Text style={{ fontSize: 13, color: t.textMuted, marginTop: 6, textAlign: "center" }}>
           Pick 2–3 main openings per colour. This personalises your scouting reports.
@@ -165,7 +164,6 @@ export function SetupScreen({ navigation }: Props) {
 }
 
 const st = StyleSheet.create({
-  logo: { height: 48, width: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   counter: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
   chip: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingHorizontal: 12, height: 42, fontSize: 13 },

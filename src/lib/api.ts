@@ -472,6 +472,8 @@ export const api = {
     scheduled_for: string;
     scheduled_time?: string | null;
     duration_minutes?: number | null;
+    reminder_sound_uri?: string;
+    reminder_sound_name?: string;
   }): Promise<PrepSession> {
     return fetchJson(`${API_BASE}/prep-sessions/`, {
       method: "POST",
@@ -480,7 +482,22 @@ export const api = {
     });
   },
 
-  updatePrepSession(id: number, payload: { completed_at: string | null }): Promise<PrepSession> {
+  updatePrepSession(
+    id: number,
+    payload: Partial<
+      Pick<
+        PrepSession,
+        | "title"
+        | "notes"
+        | "scheduled_for"
+        | "scheduled_time"
+        | "duration_minutes"
+        | "completed_at"
+        | "reminder_sound_uri"
+        | "reminder_sound_name"
+      >
+    >
+  ): Promise<PrepSession> {
     return fetchJson(`${API_BASE}/prep-sessions/${id}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

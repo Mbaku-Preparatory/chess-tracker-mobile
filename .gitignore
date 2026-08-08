@@ -44,3 +44,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local expo modules keep their sources tracked, but not their gradle output
+modules/*/android/build/
+modules/*/android/.gradle/

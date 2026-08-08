@@ -21,9 +21,8 @@ const fetchPrepSessionsFromApi = async (action: any) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const updatePrepSessionViaApi = async (action: any) => {
   try {
-    const { id, completed } = action.payload;
-    const completed_at = completed ? new Date().toISOString() : null;
-    action.payload = { item: await api.updatePrepSession(id, { completed_at }) };
+    const { id, changes } = action.payload;
+    action.payload = { item: await api.updatePrepSession(id, changes) };
   } catch (err) {
     action.errors = err instanceof Error ? err.message : "Failed to update prep session";
   }
