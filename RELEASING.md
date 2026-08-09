@@ -47,6 +47,27 @@ and neither is incremented automatically. **Every** upload to Play needs a
 "android": { "versionCode": 2 }   // must increase on every single upload
 ```
 
+Then update **`MOBILE_LATEST_VERSION` in Railway's variables** to match, so the
+in-app "update available" banner is accurate. Do not edit the default in
+`config/settings/base.py` - those defaults are deliberately inert fallbacks, and
+the whole point of the gate being env-driven is that changing it never needs a
+backend deploy.
+
+## Forcing an update (emergency)
+
+Set on Railway - no code change, no rebuild:
+
+| Variable | Effect |
+|---|---|
+| `MOBILE_MIN_VERSION` | Anything below this is hard-blocked with the update screen |
+| `MOBILE_BLOCKED_VERSIONS` | Comma-separated kill switch for specific bad builds, without raising the floor |
+| `MOBILE_UPDATE_MESSAGE` | Optional custom text on the update screen |
+
+The gate fails open at every layer: unset variables leave it inert, an unparseable
+client version is let through, and the app treats any network error as "carry on".
+That is deliberate - a gate that fails closed turns a config typo into an app
+nobody can open.
+
 ## Permissions
 
 `app.json` pins an explicit allowlist and a `blockedPermissions` list. The blocks
