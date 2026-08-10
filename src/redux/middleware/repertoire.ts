@@ -6,6 +6,7 @@ import {
   SAVE_REPERTOIRE,
   SAVE_REPERTOIRE_PENDING,
 } from "@/redux/actions/actionTypes";
+import { userMessage } from "@/lib/apiError";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parseOpening = (o: Record<string, unknown>) => ({
@@ -34,7 +35,7 @@ const fetchRepertoireFromGraphQL = async (action: any) => {
       };
     }
   } catch (err) {
-    action.errors = err instanceof Error ? err.message : "Failed to fetch repertoire";
+    action.errors = userMessage(err, "Failed to fetch repertoire");
   }
   return action;
 };
@@ -49,7 +50,7 @@ const saveRepertoireToGraphQL = async (action: any, storeAPI: any) => {
       action.errors = result.data.errors[0]?.message ?? "Failed to save repertoire";
     }
   } catch (err) {
-    action.errors = err instanceof Error ? err.message : "Failed to save repertoire";
+    action.errors = userMessage(err, "Failed to save repertoire");
   }
   return action;
 };

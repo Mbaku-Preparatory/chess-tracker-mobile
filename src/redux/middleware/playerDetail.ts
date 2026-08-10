@@ -1,6 +1,7 @@
 import graphqlClient from "@/api/graphqlClient";
 import { GetPlayerQuery } from "@/api/graphql/queries/players";
 import { FETCH_PLAYER_DETAIL, FETCH_PLAYER_DETAIL_PENDING } from "@/redux/actions/actionTypes";
+import { userMessage } from "@/lib/apiError";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapGame = (g: Record<string, unknown>) => ({
@@ -99,7 +100,7 @@ const fetchPlayerDetailFromGraphQL = async (action: any) => {
       status: e?.response?.status,
       url: e?.config?.url,
     });
-    action.errors = err instanceof Error ? err.message : "Failed to fetch player";
+    action.errors = userMessage(err, "Failed to fetch player");
   }
   return action;
 };

@@ -8,6 +8,8 @@ import type {
   ChessResultsImportResult,
   ChessResultsPlayerCandidate,
   ChessResultsTournamentOption,
+  ActiveImportJob,
+  ImportJob,
   LichessImportResult,
   Game,
   GamesFilter,
@@ -27,6 +29,7 @@ import type {
   UserProfile,
   RepertoireData,
 } from "@/types";
+import { buildApiError, buildNetworkError } from "@/lib/apiError";
 import { authStorage } from "@/lib/auth";
 import { handleAuthFailure } from "@/lib/handleAuthFailure";
 import { refreshAccessToken } from "@/lib/refreshAccessToken";
@@ -50,13 +53,20 @@ async function fetchJson<T>(url: string, init?: RequestInit, _retriedAfterRefres
     : {};
   requestTracker.increment();
   try {
-    const res = await fetch(url, {
-      ...init,
-      headers: {
-        ...authHeader,
-        ...(init?.headers ?? {}),
-      },
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        ...init,
+        headers: {
+          ...authHeader,
+          ...(init?.headers ?? {}),
+        },
+      });
+    } catch (cause) {
+      // fetch only rejects when the request never completed — no signal, DNS,
+      // airplane mode. "Network request failed" means nothing to a user.
+      throw buildNetworkError(cause);
+    }
     if (!res.ok) {
       // A 401 means this access token is no longer good. Try a silent
       // refresh and retry once before giving up and logging the user out -
@@ -71,11 +81,7 @@ async function fetchJson<T>(url: string, init?: RequestInit, _retriedAfterRefres
         void handleAuthFailure();
       }
       const body = await res.json().catch(() => null);
-      const msg = body?.detail || `API error: ${res.status} ${res.statusText}`;
-      const err = new Error(msg);
-      (err as any).status = res.status;
-      (err as any).body = body;
-      throw err;
+      throw buildApiError(res.status, res.statusText, body);
     }
     if (res.status === 204) {
       return undefined as T;
@@ -209,6 +215,40 @@ export const api = {
     tournaments: ChessResultsTournamentOption[];
   }> {
     return fetchJson(`${API_BASE}/chess-results/player/${crId}/tournaments/`);
+  },
+
+  // ── Background import jobs ─────────────────────────────────────────────────
+  //
+  // Queue a batch and poll it, rather than looping in the app. The work
+  // continues if the phone locks or the app is backgrounded — which on mobile
+  // matters more than on the web, where at least the tab usually stays open.
+
+  createImportJob(
+    slug: string,
+    tournaments: { name: string; url: string }[],
+    notifyEmail = false
+  ): Promise<ImportJob> {
+    return fetchJson(`${API_BASE}/players/${slug}/import-jobs/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tournaments, notify_email: notifyEmail }),
+    });
+  },
+
+  getImportJob(jobId: string): Promise<ImportJob> {
+    return fetchJson(`${API_BASE}/import-jobs/${jobId}/`);
+  },
+
+  cancelImportJob(jobId: string): Promise<ImportJob> {
+    return fetchJson(`${API_BASE}/import-jobs/${jobId}/cancel/`, { method: "POST" });
+  },
+
+  activeImportJobs(): Promise<{ results: ActiveImportJob[] }> {
+    return fetchJson(`${API_BASE}/import-jobs/active/`);
+  },
+
+  recentImportJobs(slug: string): Promise<{ results: ImportJob[] }> {
+    return fetchJson(`${API_BASE}/players/${slug}/import-jobs/recent/`);
   },
 
   importFromChessResults(

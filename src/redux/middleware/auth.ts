@@ -1,6 +1,7 @@
 import graphqlClient from "@/api/graphqlClient";
 import { LoginMutation, RegisterMutation } from "@/api/graphql/queries/auth";
 import { LOGIN, REGISTER } from "@/redux/actions/actionTypes";
+import { userMessage } from "@/lib/apiError";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleAuth = async (action: any, queryFn: (email: string, password: string) => string) => {
@@ -15,7 +16,7 @@ const handleAuth = async (action: any, queryFn: (email: string, password: string
       action.payload = { token: data.token, refreshToken: data.refreshToken, email: data.email };
     }
   } catch (err) {
-    action.errors = err instanceof Error ? err.message : "Authentication failed";
+    action.errors = userMessage(err, "Authentication failed");
   }
   return action;
 };

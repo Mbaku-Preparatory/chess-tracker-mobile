@@ -16,6 +16,7 @@ import { RootNavigator } from "@/navigation/RootNavigator";
 import { UpdateRequiredScreen } from "@/screens/UpdateRequiredScreen";
 import { checkVersionGate, type VersionGate } from "@/lib/appVersion";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
+import { ActiveImportsIndicator } from "@/components/import/ActiveImportsIndicator";
 
 function AppShell() {
   const t = useTheme();
@@ -52,7 +53,15 @@ function AppShell() {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={t.mode === "dark" ? "light" : "dark"} />
       <NavigationContainer ref={navigationRef} theme={navTheme}>
-        <RootNavigator />
+        {/*
+          Inside the container, not beside it: the indicator uses navigation
+          hooks to hide itself on the import screen and to link back to the
+          player it is importing.
+        */}
+        <>
+          <RootNavigator />
+          <ActiveImportsIndicator />
+        </>
       </NavigationContainer>
       <GlobalLoader />
     </View>

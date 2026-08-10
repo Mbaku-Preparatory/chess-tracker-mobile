@@ -18,6 +18,7 @@ import { OpeningBreakdownCard } from "@/components/players/OpeningBreakdownCard"
 import { StrengthWeaknessCard } from "@/components/players/StrengthWeaknessCard";
 import { GamesTable } from "@/components/players/GamesTable";
 import type { RootStackParamList } from "@/navigation/types";
+import { userMessage } from "@/lib/apiError";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PlayerDetail">;
 
@@ -40,7 +41,7 @@ function FideSection({ slug, fideId }: { slug: string; fideId: string | null }) 
         dispatch(fetchPlayerDetail(slug));
         setShowInput(false);
       } catch (err) {
-        setMessage(err instanceof Error ? err.message : "Sync failed");
+        setMessage(userMessage(err, "Sync failed"));
       } finally {
         setSyncing(false);
       }

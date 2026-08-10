@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import Logo from "../components/ui/Logo";
+import { userMessage } from "@/lib/apiError";
 
 type Props = NativeStackScreenProps<RootStackParamList, "VerifyEmail">;
 
@@ -31,7 +32,7 @@ export function VerifyEmailScreen({ route, navigation }: Props) {
       const data = await api.verifyEmail(email, code.trim());
       dispatch(setAuth({ token: data.access, refreshToken: data.refresh, email: data.email }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed.");
+      setError(userMessage(err, "Verification failed."));
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,7 @@ export function VerifyEmailScreen({ route, navigation }: Props) {
       await api.resendVerification(email);
       setResent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't resend the code.");
+      setError(userMessage(err, "Couldn't resend the code."));
     }
   }
 

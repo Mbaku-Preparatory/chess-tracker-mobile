@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import Logo from "../components/ui/Logo";
+import { userMessage } from "@/lib/apiError";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -30,7 +31,7 @@ export function LoginScreen({ navigation }: Props) {
       const data = await api.login(email.trim().toLowerCase(), password);
       dispatch(setAuth({ token: data.access, refreshToken: data.refresh, email: data.email }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed.");
+      setError(userMessage(err, "Login failed."));
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeContext";
 import { Card } from "@/components/ui/Card";
 import type { PlayerAccount } from "@/types";
+import { userMessage } from "@/lib/apiError";
 
 const PLATFORM_LABEL = { chesscom: "Chess.com", lichess: "Lichess" } as const;
 
@@ -33,7 +34,7 @@ export function ConnectedAccountManager({
       await action();
       await onUpdated?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Action failed.");
+      setError(userMessage(err, "Action failed."));
     } finally {
       setBusyKey(null);
     }

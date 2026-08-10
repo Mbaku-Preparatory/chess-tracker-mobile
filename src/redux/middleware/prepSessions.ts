@@ -7,13 +7,14 @@ import {
   UPDATE_PREP_SESSION,
   UPDATE_PREP_SESSION_PENDING,
 } from "@/redux/actions/actionTypes";
+import { userMessage } from "@/lib/apiError";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fetchPrepSessionsFromApi = async (action: any) => {
   try {
     action.payload = { items: await api.getPrepSessions() };
   } catch (err) {
-    action.errors = err instanceof Error ? err.message : "Failed to load prep sessions";
+    action.errors = userMessage(err, "Failed to load prep sessions");
   }
   return action;
 };
@@ -24,7 +25,7 @@ const updatePrepSessionViaApi = async (action: any) => {
     const { id, changes } = action.payload;
     action.payload = { item: await api.updatePrepSession(id, changes) };
   } catch (err) {
-    action.errors = err instanceof Error ? err.message : "Failed to update prep session";
+    action.errors = userMessage(err, "Failed to update prep session");
   }
   return action;
 };
@@ -36,7 +37,7 @@ const deletePrepSessionViaApi = async (action: any) => {
     await api.deletePrepSession(id);
     action.payload = { id };
   } catch (err) {
-    action.errors = err instanceof Error ? err.message : "Failed to delete prep session";
+    action.errors = userMessage(err, "Failed to delete prep session");
   }
   return action;
 };

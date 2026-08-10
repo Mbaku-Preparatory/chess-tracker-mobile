@@ -7,6 +7,7 @@ import { useTheme } from "@/theme/ThemeContext";
 import { ConnectedAccountManager } from "./ConnectedAccountManager";
 import { ImportResultPanel } from "./ImportResultPanel";
 import type { LichessImportResult, PGNImportResult, PlayerAccount } from "@/types";
+import { userMessage } from "@/lib/apiError";
 
 const LIMITS = [25, 50, 100, 200];
 const LI_COLOR = "#b05000";
@@ -47,7 +48,7 @@ export function LichessImportSection({
       await onUpdated?.();
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
-      setErrorMsg(err instanceof Error ? err.message : "Import failed. Check the username and try again.");
+      setErrorMsg(userMessage(err, "Import failed. Check the username and try again."));
       setStatus("error");
     }
   }

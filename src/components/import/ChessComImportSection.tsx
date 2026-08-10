@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { ConnectedAccountManager } from "./ConnectedAccountManager";
 import { ImportResultPanel } from "./ImportResultPanel";
 import type { ChessComImportResult, PGNImportResult, PlayerAccount } from "@/types";
+import { userMessage } from "@/lib/apiError";
 
 const LIMITS = [25, 50, 100, 200];
 const CC_COLOR = "#7fa650";
@@ -48,7 +49,7 @@ export function ChessComImportSection({
       await onUpdated?.();
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
-      setErrorMsg(err instanceof Error ? err.message : "Import failed. Check the username and try again.");
+      setErrorMsg(userMessage(err, "Import failed. Check the username and try again."));
       setStatus("error");
     }
   }

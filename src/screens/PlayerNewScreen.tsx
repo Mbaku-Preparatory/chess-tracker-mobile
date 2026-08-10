@@ -12,6 +12,7 @@ import { TextField } from "@/components/ui/TextField";
 import { FederationSelect } from "@/components/ui/FederationSelect";
 import type { RootStackParamList } from "@/navigation/types";
 import type { PlayerLookupResult } from "@/types";
+import { userMessage } from "@/lib/apiError";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PlayerNew">;
 
@@ -171,7 +172,7 @@ export function PlayerNewScreen({ navigation }: Props) {
     } catch (err) {
       // The API explains short queries and FIDE outages — pass that through
       // rather than flattening both to "try again".
-      setFideError(err instanceof Error ? err.message : "FIDE search failed. Try again.");
+      setFideError(userMessage(err, "FIDE search failed. Try again."));
     } finally {
       setFideSearching(false);
     }
@@ -213,7 +214,7 @@ export function PlayerNewScreen({ navigation }: Props) {
       const source = chesscomUsername.trim() ? "chesscom" : lichessUsername.trim() ? "lichess" : "chess_results";
       navigation.replace("PlayerImport", { slug: player.public_id, source });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create player. Try again.");
+      setError(userMessage(err, "Could not create player. Try again."));
     } finally {
       setLoading(false);
     }

@@ -16,6 +16,7 @@ import { ChessResultsImportSection } from "@/components/import/ChessResultsImpor
 import { ImportResultPanel } from "@/components/import/ImportResultPanel";
 import type { RootStackParamList } from "@/navigation/types";
 import type { PGNImportResult, PlayerDetail } from "@/types";
+import { userMessage } from "@/lib/apiError";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PlayerImport">;
 
@@ -97,7 +98,7 @@ export function PlayerImportScreen({ route, navigation }: Props) {
       });
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Import failed. Check your PGN and try again.");
+      setError(userMessage(err, "Import failed. Check your PGN and try again."));
     } finally {
       setLoading(false);
     }

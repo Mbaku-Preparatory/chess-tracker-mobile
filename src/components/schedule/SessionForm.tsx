@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { toDateString, toTimeString } from "@/utils/schedule";
+import { userMessage } from "@/lib/apiError";
 
 export interface SessionFormPayload {
   title: string;
@@ -102,7 +103,7 @@ export function SessionForm({
         reminder_sound_name: reminderSoundName,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save session. Try again.");
+      setError(userMessage(err, "Could not save session. Try again."));
     } finally {
       setLoading(false);
     }

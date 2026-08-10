@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import type { RootStackParamList } from "@/navigation/types";
 import type { Player } from "@/types";
+import { userMessage } from "@/lib/apiError";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -84,7 +85,7 @@ export function PlayerCard({
               await api.deletePlayer(playerRef);
               onDeleted?.(player);
             } catch (err) {
-              Alert.alert("Error", err instanceof Error ? err.message : "Failed to delete player.");
+              Alert.alert("Error", userMessage(err, "Failed to delete player."));
             } finally {
               setDeleting(false);
             }

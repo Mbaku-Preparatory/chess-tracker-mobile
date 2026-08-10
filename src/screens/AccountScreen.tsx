@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@/types";
+import { userMessage } from "@/lib/apiError";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Account">;
 
@@ -48,7 +49,7 @@ export function AccountScreen({ navigation }: Props) {
           setFirstName(data.first_name);
           setLastName(data.last_name);
         } catch (err) {
-          if (!cancelled) setError(err instanceof Error ? err.message : "Couldn't load your profile.");
+          if (!cancelled) setError(userMessage(err, "Couldn't load your profile."));
         } finally {
           if (!cancelled) setLoading(false);
         }
@@ -72,7 +73,7 @@ export function AccountScreen({ navigation }: Props) {
       setLastName(updated.last_name);
       Alert.alert("Saved", "Your name has been updated.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save your changes.");
+      setError(userMessage(err, "Couldn't save your changes."));
     } finally {
       setSaving(false);
     }

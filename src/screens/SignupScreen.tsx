@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import Logo from "../components/ui/Logo";
+import { userMessage } from "@/lib/apiError";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Signup">;
 
@@ -41,7 +42,7 @@ export function SignupScreen({ navigation }: Props) {
       );
       navigation.navigate("VerifyEmail", { email: normalizedEmail });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed.");
+      setError(userMessage(err, "Signup failed."));
     } finally {
       setLoading(false);
     }
