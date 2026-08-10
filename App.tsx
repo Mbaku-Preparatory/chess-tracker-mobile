@@ -53,16 +53,15 @@ function AppShell() {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={t.mode === "dark" ? "light" : "dark"} />
       <NavigationContainer ref={navigationRef} theme={navTheme}>
-        {/*
-          Inside the container, not beside it: the indicator uses navigation
-          hooks to hide itself on the import screen and to link back to the
-          player it is importing.
-        */}
-        <>
-          <RootNavigator />
-          <ActiveImportsIndicator />
-        </>
+        <RootNavigator />
       </NavigationContainer>
+      {/*
+        Beside the container, like GlobalLoader. It drives navigation through
+        navigationRef, so it needs no navigator above it — putting it inside
+        the container does NOT provide navigation context and crashes on first
+        render.
+      */}
+      <ActiveImportsIndicator />
       <GlobalLoader />
     </View>
   );

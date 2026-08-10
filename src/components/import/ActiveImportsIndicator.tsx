@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
-import { useNavigation, useNavigationState } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-
 import { api } from "@/lib/api";
+import { navigationRef } from "@/navigation/navigationRef";
 import { useAppSelector } from "@/redux/hooks";
 import { useTheme } from "@/theme/ThemeContext";
-import type { RootStackParamList } from "@/navigation/types";
 import type { ActiveImportJob } from "@/types";
-
-type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const CR_COLOR = "#1a3a6b";
 const POLL_INTERVAL_MS = 3000;
@@ -24,10 +19,15 @@ const PAWN_CELLS = 8;
  *
  * Polls a single endpoint covering every unfinished job, so the cost is one
  * request every few seconds no matter how many imports are in flight.
+ *
+ * Uses navigationRef rather than navigation hooks. This renders as a sibling of
+ * NavigationContainer, and useNavigation/useNavigationState require being
+ * inside a *navigator* — being inside the container is not enough, and calling
+ * them here throws "Couldn't get the navigation state" on first render, which
+ * crashes the app at launch.
  */
 export function ActiveImportsIndicator() {
   const t = useTheme();
-  const navigation = useNavigation<Nav>();
   const token = useAppSelector((s) => s.auth.token);
 
   const [jobs, setJobs] = useState<ActiveImportJob[]>([]);
@@ -36,7 +36,13 @@ export function ActiveImportsIndicator() {
 
   // The import screen already shows the full picture; a pill on top of it is
   // just a second, smaller copy of the same numbers.
-  const routeName = useNavigationState((s) => (s ? s.routes[s.index]?.name : undefined));
+  const [routeName, setRouteName] = useState<string | undefined>();
+  useEffect(() => {
+    const sync = () =>
+      setRouteName(navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined);
+    sync();
+    return navigationRef.addListener("state", sync);
+  }, []);
   const onImportScreen = routeName === "PlayerImport";
 
   const poll = useCallback(async () => {
@@ -96,8 +102,8 @@ export function ActiveImportsIndicator() {
   return (
     <Pressable
       onPress={() => {
-        if (single) {
-          navigation.navigate("PlayerImport", {
+        if (single && navigationRef.isReady()) {
+          navigationRef.navigate("PlayerImport", {
             slug: single.player_slug,
             source: "chess_results",
           });
