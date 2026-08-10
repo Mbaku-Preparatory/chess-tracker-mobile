@@ -193,3 +193,75 @@ export async function sendTestNotification(): Promise<boolean> {
   });
   return true;
 }
+
+// ── Import completion ────────────────────────────────────────────────────────
+
+const IMPORT_CHANNEL_ID = "import-complete";
+
+/**
+ * A separate channel from prep reminders, so someone can silence one without
+ * losing the other — and because MAX importance is right for "your session
+ * starts in 30 minutes" and wrong for "your games finished downloading".
+ */
+async function ensureImportChannel(): Promise<void> {
+  if (Platform.OS !== "android") return;
+  await Notifications.setNotificationChannelAsync(IMPORT_CHANNEL_ID, {
+    name: "Import updates",
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
+}
+
+export interface FinishedImport {
+  playerName: string;
+  status: "succeeded" | "failed" | "cancelled";
+  gamesImported: number;
+  total: number;
+  playerSlug: string;
+}
+
+/**
+ * Tell the user their import finished.
+ *
+ * Fired locally, the moment the app's poller sees a job reach a terminal state
+ * — no server push involved, so it needs no FCM setup and works in the build
+ * that is already installed. The limitation that comes with that: it only fires
+ * while the app's JS is alive. Kill the app outright and nothing arrives until
+ * it is reopened, which is what real remote push would fix.
+ *
+ * Silent when the permission is missing. Asking for notification permission out
+ * of nowhere, because a background job happened to finish, is not the moment.
+ */
+export async function notifyImportFinished(job: FinishedImport): Promise<boolean> {
+  if (!(await hasNotificationPermission())) return false;
+  await ensureImportChannel();
+
+  const { playerName, status, gamesImported, total } = job;
+
+  const title =
+    status === "succeeded"
+      ? "Games imported"
+      : status === "cancelled"
+        ? "Import stopped"
+        : "Import didn't finish";
+
+  const body =
+    status === "succeeded"
+      ? `${gamesImported} game${gamesImported !== 1 ? "s" : ""} added for ${playerName}` +
+        (total > 1 ? ` from ${total} tournaments` : "")
+      : status === "cancelled"
+        ? `${playerName}: stopped after ${job.total} tournament${total !== 1 ? "s" : ""}. Anything already imported was kept.`
+        : `We couldn't import ${playerName}'s games. Nothing was lost — you can try again.`;
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      data: { source: "importJob", playerSlug: job.playerSlug },
+      ...(Platform.OS === "android" ? { channelId: IMPORT_CHANNEL_ID } : {}),
+    },
+    // null means "now" — this is a report of something that already happened,
+    // not a reminder for later.
+    trigger: null,
+  });
+  return true;
+}

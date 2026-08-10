@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
+import { requestNotificationPermissions } from "@/lib/notifications";
 import { useTheme } from "@/theme/ThemeContext";
 import { Button } from "@/components/ui/Button";
 import { ImportProgressBar } from "@/components/import/ImportProgressBar";
@@ -209,7 +210,14 @@ export function ChessResultsImportSection({
 
   const notifyRow = (
     <Pressable
-      onPress={() => setNotifyEmail((v) => !v)}
+      onPress={async () => {
+        const next = !notifyEmail;
+        setNotifyEmail(next);
+        // Ask for the notification permission at the moment they ask to be
+        // told — not out of nowhere later when the import happens to finish.
+        // Declining still leaves the email, so the box remains ticked.
+        if (next) await requestNotificationPermissions();
+      }}
       style={[st.notifyRow, { borderColor: t.border, backgroundColor: t.surface }]}
     >
       <Ionicons
@@ -219,10 +227,10 @@ export function ChessResultsImportSection({
       />
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 13, fontWeight: "600", color: t.text }}>
-          Email me when this is done
+          Tell me when this is done
         </Text>
         <Text style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
-          Useful for big imports — we&apos;ll send a link to the player.
+          A notification on this phone, and an email with a link to the player.
         </Text>
       </View>
     </Pressable>

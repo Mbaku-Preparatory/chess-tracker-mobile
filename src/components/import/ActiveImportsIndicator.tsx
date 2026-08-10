@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
 import { api } from "@/lib/api";
+import { notifyImportFinished } from "@/lib/notifications";
 import { navigationRef } from "@/navigation/navigationRef";
 import { useAppSelector } from "@/redux/hooks";
 import { useTheme } from "@/theme/ThemeContext";
@@ -45,10 +46,39 @@ export function ActiveImportsIndicator() {
   }, []);
   const onImportScreen = routeName === "PlayerImport";
 
+  // Jobs seen active on the previous poll, so a disappearance can be spotted.
+  const seenRef = useRef<Map<string, { name: string; slug: string }>>(new Map());
+
   const poll = useCallback(async () => {
     try {
       const { results } = await api.activeImportJobs();
-      if (!stoppedRef.current) setJobs(results);
+      if (stoppedRef.current) return;
+
+      // A finished job simply drops out of the active list, which is the only
+      // signal we get that it is done. Fetch each departed job once to find out
+      // how it actually ended, then tell the user.
+      const stillActive = new Set(results.map((j) => j.id));
+      const departed = [...seenRef.current.entries()].filter(([id]) => !stillActive.has(id));
+
+      seenRef.current = new Map(results.map((j) => [j.id, { name: j.player_name, slug: j.player_slug }]));
+      setJobs(results);
+
+      for (const [id, player] of departed) {
+        try {
+          const job = await api.getImportJob(id);
+          if (job.status === "pending" || job.status === "running") continue;
+          await notifyImportFinished({
+            playerName: player.name,
+            playerSlug: player.slug,
+            status: job.status,
+            gamesImported: job.games_imported,
+            total: job.total,
+          });
+        } catch {
+          // Couldn't confirm how it ended — better to say nothing than to
+          // announce an outcome we are guessing at.
+        }
+      }
     } catch {
       // Offline, signed out, backend down — none of it is worth interrupting
       // anyone over. Keep the last known state and try again.
