@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -378,38 +378,18 @@ export function ChessResultsImportSection({
             </Text>
           ) : (
             <>
-              <Pressable
-                onPress={() => startImport(step.tournaments)}
-                style={[st.modeCard, { borderColor: CR_COLOR, backgroundColor: t.surface }]}
-              >
-                <Text style={{ fontSize: 20 }}>♞</Text>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: t.text, marginTop: 4 }}>
-                  Fetch all tournaments
-                </Text>
-                <Text style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
-                  Import all {step.tournaments.length} events. Best for a new player.
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() =>
+              <ModeCards
+                active={null}
+                count={step.tournaments.length}
+                onFetchAll={() => startImport(step.tournaments)}
+                onChoose={() =>
                   setStep({
                     type: "selecting-tournaments",
                     playerName: step.playerName,
                     tournaments: step.tournaments,
                   })
                 }
-                style={[st.modeCard, { borderColor: t.border, backgroundColor: t.surface }]}
-              >
-                <Text style={{ fontSize: 20 }}>♟</Text>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: t.text, marginTop: 4 }}>
-                  Choose tournaments
-                </Text>
-                <Text style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
-                  Pick exactly which events to bring in.
-                </Text>
-              </Pressable>
-
+              />
               {notifyRow}
             </>
           )}
@@ -419,6 +399,15 @@ export function ChessResultsImportSection({
       {/* ── Pick specific tournaments ──────────────────────────────────────── */}
       {step.type === "selecting-tournaments" && (
         <View style={{ gap: 10 }}>
+          {/* The cards stay put with the highlight on the active choice, so it
+              is obvious which mode you are in and switching back is one tap. */}
+          <ModeCards
+            active="choose"
+            count={step.tournaments.length}
+            onFetchAll={() => startImport(step.tournaments)}
+            onChoose={() => {}}
+          />
+
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Pressable
               onPress={() =>
@@ -445,7 +434,17 @@ export function ChessResultsImportSection({
             </View>
           </View>
 
-          <View style={{ gap: 6 }}>
+          {/*
+            The list scrolls inside itself. Magnus Carlsen has 250-odd events,
+            and letting them all flow into the page ScrollView buried the
+            checkbox and the Import button under a quarter-mile of rows.
+          */}
+          <ScrollView
+            style={{ maxHeight: 320 }}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ gap: 6, paddingVertical: 2 }}
+          >
             {step.tournaments.map((tt) => {
               const key = `${tt.tnr}-${tt.snr}`;
               const checked = selected.has(key);
@@ -474,7 +473,7 @@ export function ChessResultsImportSection({
                 </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
 
           {notifyRow}
 
@@ -511,6 +510,58 @@ export function ChessResultsImportSection({
           onViewProfile={() => navigation.navigate("PlayerDetail", { slug: playerRef })}
         />
       )}
+    </View>
+  );
+}
+
+// ── Mode cards ───────────────────────────────────────────────────────────────
+
+/**
+ * The two ways in, shown in both steps so the highlight can move to whichever
+ * you picked. A permanently-highlighted "Fetch all" while you were busy
+ * ticking boxes said the wrong thing about where you were.
+ */
+function ModeCards({
+  active,
+  count,
+  onFetchAll,
+  onChoose,
+}: {
+  active: "all" | "choose" | null;
+  count: number;
+  onFetchAll: () => void;
+  onChoose: () => void;
+}) {
+  const t = useTheme();
+
+  const card = (isActive: boolean) => [
+    st.modeCard,
+    isActive
+      ? { borderColor: CR_COLOR, backgroundColor: "rgba(26,58,107,0.08)" }
+      : { borderColor: t.border, backgroundColor: t.surface },
+  ];
+
+  return (
+    <View style={{ gap: 8 }}>
+      <Pressable onPress={onFetchAll} style={card(active === "all")}>
+        <Text style={{ fontSize: 20 }}>♞</Text>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: t.text, marginTop: 4 }}>
+          Fetch all tournaments
+        </Text>
+        <Text style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
+          Import all {count} events. Best for a new player.
+        </Text>
+      </Pressable>
+
+      <Pressable onPress={onChoose} style={card(active === "choose")}>
+        <Text style={{ fontSize: 20 }}>♟</Text>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: t.text, marginTop: 4 }}>
+          Choose tournaments
+        </Text>
+        <Text style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
+          Pick exactly which events to bring in.
+        </Text>
+      </Pressable>
     </View>
   );
 }
