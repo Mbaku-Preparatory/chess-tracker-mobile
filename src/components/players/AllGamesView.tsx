@@ -29,6 +29,23 @@ const YEAR_OPTIONS = [
   ...Array.from({ length: CURRENT_YEAR - 2009 }, (_, i) => String(CURRENT_YEAR - i)).map((y) => ({ value: y, label: y })),
 ];
 
+// Opponent-rating bands. `value` is "<min>-<max>", either side may be blank.
+const RATING_OPTIONS = [
+  { value: "", label: "All ratings" },
+  { value: "-1599", label: "<1600" },
+  { value: "1600-1799", label: "1600–1799" },
+  { value: "1800-1999", label: "1800–1999" },
+  { value: "2000-2199", label: "2000–2199" },
+  { value: "2200-2399", label: "2200–2399" },
+  { value: "2400-", label: "2400+" },
+];
+
+function ratingParams(band: string): { min_rating?: string; max_rating?: string } {
+  if (!band) return {};
+  const [min, max] = band.split("-");
+  return { ...(min ? { min_rating: min } : {}), ...(max ? { max_rating: max } : {}) };
+}
+
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   const t = useTheme();
   return (
@@ -50,6 +67,7 @@ export function AllGamesView({ slug }: { slug: string }) {
   const [resultFilter, setResultFilter] = useState<GameResult | "">("");
   const [sourceFilter, setSourceFilter] = useState<GameSource | "">("");
   const [yearFilter, setYearFilter] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("");
   const [search, setSearch] = useState("");
 
   function handleGameDeleted(gameId: number) {
@@ -59,7 +77,7 @@ export function AllGamesView({ slug }: { slug: string }) {
 
   useEffect(() => {
     setPage(1);
-  }, [colorFilter, resultFilter, sourceFilter, yearFilter, search]);
+  }, [colorFilter, resultFilter, sourceFilter, yearFilter, ratingFilter, search]);
 
   useEffect(() => {
     setLoading(true);
@@ -70,6 +88,7 @@ export function AllGamesView({ slug }: { slug: string }) {
         ...(resultFilter ? { result: resultFilter } : {}),
         ...(sourceFilter ? { source: sourceFilter } : {}),
         ...(yearFilter ? { year: yearFilter } : {}),
+        ...ratingParams(ratingFilter),
         ...(search ? { search } : {}),
         page,
       })
@@ -79,10 +98,12 @@ export function AllGamesView({ slug }: { slug: string }) {
       })
       .catch(() => setError("Failed to load games."))
       .finally(() => setLoading(false));
-  }, [slug, colorFilter, resultFilter, sourceFilter, yearFilter, search, page]);
+  }, [slug, colorFilter, resultFilter, sourceFilter, yearFilter, ratingFilter, search, page]);
 
   const totalPages = Math.ceil(total / 20);
-  const hasActiveFilters = Boolean(colorFilter || resultFilter || sourceFilter || yearFilter || search);
+  const hasActiveFilters = Boolean(
+    colorFilter || resultFilter || sourceFilter || yearFilter || ratingFilter || search
+  );
 
   return (
     <View>
@@ -111,6 +132,12 @@ export function AllGamesView({ slug }: { slug: string }) {
         <View style={[st.sep, { backgroundColor: t.border }]} />
         {YEAR_OPTIONS.slice(0, 8).map((o) => (
           <Chip key={o.value} label={o.label} active={yearFilter === o.value} onPress={() => setYearFilter(o.value)} />
+        ))}
+      </ScrollView>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 10 }}>
+        {RATING_OPTIONS.map((o) => (
+          <Chip key={o.value} label={o.label} active={ratingFilter === o.value} onPress={() => setRatingFilter(o.value)} />
         ))}
       </ScrollView>
 

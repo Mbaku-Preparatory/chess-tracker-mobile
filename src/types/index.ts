@@ -179,6 +179,8 @@ export interface GamesFilter {
   source?: GameSource | "";
   search?: string;
   year?: string;
+  min_rating?: string;
+  max_rating?: string;
   page?: number;
 }
 

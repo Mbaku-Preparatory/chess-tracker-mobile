@@ -119,6 +119,8 @@ export const api = {
     if (filters?.source) params.set("source", filters.source);
     if (filters?.search) params.set("search", filters.search);
     if (filters?.year) params.set("year", filters.year);
+    if (filters?.min_rating) params.set("min_rating", filters.min_rating);
+    if (filters?.max_rating) params.set("max_rating", filters.max_rating);
     if (filters?.page) params.set("page", String(filters.page));
     return fetchJson(`${API_BASE}/players/${slug}/games/?${params}`);
   },
