@@ -13,6 +13,7 @@ import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@/types";
 import { userMessage } from "@/lib/apiError";
+import { TipSection } from "@/components/TipSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Account">;
 
@@ -166,6 +167,12 @@ export function AccountScreen({ navigation }: Props) {
           value={BUILD_NUMBER ? `${APP_VERSION} (build ${BUILD_NUMBER})` : APP_VERSION}
         />
       </View>
+
+      {/* Support — last on the page on purpose. Asking for money should be
+          the thing you find at the bottom, not the thing that greets you. */}
+      <View style={{ height: 28 }} />
+      <Text style={[st.sectionLabel, { color: t.textMuted }]}>SUPPORT</Text>
+      <TipSection />
 
       <View style={{ height: 24 }} />
       <Button title="Back" variant="ghost" onPress={() => navigation.goBack()} />

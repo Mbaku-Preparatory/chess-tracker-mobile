@@ -10,6 +10,7 @@ import type {
   ChessResultsTournamentOption,
   ActiveImportJob,
   ImportJob,
+  Payment,
   LichessImportResult,
   Game,
   GamesFilter,
@@ -215,6 +216,24 @@ export const api = {
     tournaments: ChessResultsTournamentOption[];
   }> {
     return fetchJson(`${API_BASE}/chess-results/player/${crId}/tournaments/`);
+  },
+
+  // ── Payments ───────────────────────────────────────────────────────────────
+
+  /**
+   * Send an M-Pesa prompt for a tip. Resolves once the prompt is on its way —
+   * not once it is paid. Poll getPayment until the status settles.
+   */
+  createTip(phone: string, amount: number): Promise<Payment> {
+    return fetchJson(`${API_BASE}/payments/tip/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, amount }),
+    });
+  },
+
+  getPayment(id: number): Promise<Payment> {
+    return fetchJson(`${API_BASE}/payments/${id}/`);
   },
 
   // ── Background import jobs ─────────────────────────────────────────────────
