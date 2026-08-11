@@ -591,7 +591,10 @@ function JobProgress({
 }) {
   const t = useTheme();
   const finished = isTerminal(job);
-  const queued = job.status === "pending";
+  // Pending *and* nothing done yet. A long import returns to pending between
+  // slices to let other people's imports through, and showing "Starting your
+  // import…" over 40 finished tournaments would be a lie.
+  const queued = job.status === "pending" && job.completed === 0;
   const ahead = job.queue_ahead ?? 0;
   const errorCount = job.results.filter((r) => r.status === "error").length;
 

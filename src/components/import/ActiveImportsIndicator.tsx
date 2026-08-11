@@ -126,7 +126,7 @@ export function ActiveImportsIndicator() {
 
   const single = jobs.length === 1 ? jobs[0] : null;
   const label = single ? single.player_name : `${jobs.length} imports`;
-  const queued = jobs.every((j) => j.status === "pending");
+  const queued = jobs.every((j) => j.status === "pending" && j.completed === 0);
   const ahead = single?.queue_ahead ?? 0;
 
   return (
