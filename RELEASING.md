@@ -7,10 +7,19 @@
 | Application id | `com.mbakupreparatory.app` |
 | Store name | Mbaku Preparatory |
 | Backend | `https://mbaku-preparatory-production.up.railway.app/api` |
-| Privacy policy | `https://chess-tracker-frontend.vercel.app/privacy` |
+| Privacy policy | `https://mbaku-preparatory.vercel.app/privacy` — **not live yet, see below** |
 
 The application id is **permanent**. Google Play binds a listing to it forever;
 changing it means publishing a brand-new app with zero installs and reviews.
+
+> **The privacy policy URL needs attention before release.** This table used to
+> name `chess-tracker-frontend.vercel.app`, which is not ours — that name now
+> serves an unrelated chess site, so the listing was pointing users and Google
+> at a stranger's page. The correct host is `mbaku-preparatory.vercel.app`, but
+> `/privacy` there currently 404s: the page exists only on the unmerged
+> `privacy-policy` branch. Merge and deploy that branch, confirm the URL loads,
+> and update the link in the Play Console listing — the value there is separate
+> from this file.
 
 ## Build
 
