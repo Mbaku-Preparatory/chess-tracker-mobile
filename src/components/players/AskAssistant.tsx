@@ -203,7 +203,14 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
                 : `Ask ${ASSISTANT_NAME} — e.g. where do they score worst?`
           }
           placeholderTextColor={t.textMuted}
+          // Multiline so a long question wraps and stays readable, but Enter
+          // sends rather than inserting a newline — nobody writing a question
+          // to a chatbot wants a second paragraph, and hunting for a send
+          // button after every question gets old fast.
           multiline
+          submitBehavior="submit"
+          returnKeyType="send"
+          onSubmitEditing={() => ask(question)}
           editable={!loading}
           style={[
             st.input,
