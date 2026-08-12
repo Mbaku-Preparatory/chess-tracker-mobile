@@ -13,11 +13,6 @@ import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@/types";
 import { userMessage } from "@/lib/apiError";
-// TipSection is hidden until M-Pesa go-live — MPESA_SHORTCODE is still
-// Safaricom's shared sandbox paybill, so money paid here would reach their
-// test account rather than ours. The component is kept intact; restore this
-// import and the <TipSection /> below once a real shortcode is live.
-// import { TipSection } from "@/components/TipSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Account">;
 
@@ -172,11 +167,9 @@ export function AccountScreen({ navigation }: Props) {
         />
       </View>
 
-      {/* Support — last on the page on purpose. Asking for money should be
-          the thing you find at the bottom, not the thing that greets you. */}
-      <View style={{ height: 28 }} />
-      <Text style={[st.sectionLabel, { color: t.textMuted }]}>SUPPORT</Text>
-      {/* <TipSection /> — hidden until M-Pesa go-live, see import above */}
+      {/* A SUPPORT section lived here, below everything else — asking for money
+          should be what you find at the bottom, not what greets you. Worth
+          restoring in that same position when Paystack tipping ships. */}
 
       <View style={{ height: 24 }} />
       <Button title="Back" variant="ghost" onPress={() => navigation.goBack()} />
