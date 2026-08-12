@@ -166,7 +166,14 @@ export function PlayerDetailScreen({ route, navigation }: Props) {
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
         <Button title="View All Games" onPress={() => navigation.navigate("PlayerGames", { slug })} />
-        <Button title="Ask Mbaku" variant="secondary" onPress={() => navigation.navigate("PlayerPrep", { slug, tab: "ask" })} />
+        {/* Brand-blue border so Mbaku reads as the new thing among the
+            neutral secondaries, without shouting like a primary button. */}
+        <Button
+          title="Ask Mbaku"
+          variant="secondary"
+          style={{ borderColor: t.brand(600), borderWidth: 1.5 }}
+          onPress={() => navigation.navigate("PlayerPrep", { slug, tab: "ask" })}
+        />
         <Button title="Opening Tree" variant="secondary" onPress={() => navigation.navigate("PlayerPrep", { slug })} />
         <Button title="Import Games" variant="secondary" onPress={() => navigation.navigate("PlayerImport", { slug, source: "chess_results" })} />
       </View>
