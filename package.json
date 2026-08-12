@@ -2,6 +2,7 @@
   "name": "chess-tracker-mobile-app",
   "private": true,
   "version": "1.0.4",
+  "packageManager": "pnpm@10.13.1",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -51,10 +52,5 @@
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-preset-expo": "~57.0.5",
     "typescript": "~6.0.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@sentry/cli"
-    ]
   }
 }
