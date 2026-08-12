@@ -177,6 +177,18 @@ export const api = {
     });
   },
 
+  /**
+   * Ask a natural-language question about one opponent. Answered only from the
+   * data we hold on them — the backend never lets the model invent a statistic.
+   */
+  askAboutPlayer(slug: string, question: string): Promise<{ answer: string }> {
+    return fetchJson(`${API_BASE}/players/${slug}/ask/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+  },
+
   importFromChessCom(
     slug: string,
     payload: { username?: string; limit?: number },

@@ -12,10 +12,11 @@ import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { Button } from "@/components/ui/Button";
 import { PrepSummaryPanel } from "@/components/players/PrepSummaryPanel";
 import { OpeningStudyPlan } from "@/components/players/OpeningStudyPlan";
+import { AskAssistant } from "@/components/players/AskAssistant";
 import type { RootStackParamList } from "@/navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PlayerPrep">;
-type PrepTab = "tree" | "studies";
+type PrepTab = "tree" | "studies" | "ask";
 
 export function PlayerPrepScreen({ route, navigation }: Props) {
   const { slug } = route.params;
@@ -48,7 +49,7 @@ export function PlayerPrepScreen({ route, navigation }: Props) {
       />
 
       <View style={[st.tabBar, { borderColor: t.border, backgroundColor: t.elevated }]}>
-        {([{ id: "tree", label: "Opening Tree", icon: "git-branch-outline" }, { id: "studies", label: "Opening Studies", icon: "book-outline" }] as { id: PrepTab; label: string; icon: keyof typeof Ionicons.glyphMap }[]).map((tb) => (
+        {([{ id: "tree", label: "Opening Tree", icon: "git-branch-outline" }, { id: "studies", label: "Opening Studies", icon: "book-outline" }, { id: "ask", label: "Ask", icon: "chatbubble-ellipses-outline" }] as { id: PrepTab; label: string; icon: keyof typeof Ionicons.glyphMap }[]).map((tb) => (
           <Pressable key={tb.id} onPress={() => setTab(tb.id)} style={[st.tab, tab === tb.id ? { backgroundColor: t.surface } : null]}>
             <Ionicons name={tb.icon} size={14} color={tab === tb.id ? t.text : t.textMuted} />
             <Text style={{ fontSize: 12, fontWeight: "600", color: tab === tb.id ? t.text : t.textMuted }}>{tb.label}</Text>
@@ -56,7 +57,9 @@ export function PlayerPrepScreen({ route, navigation }: Props) {
         ))}
       </View>
 
-      {tab === "tree" ? <PrepSummaryPanel slug={slug} /> : <OpeningStudyPlan slug={slug} />}
+      {tab === "tree" && <PrepSummaryPanel slug={slug} />}
+      {tab === "studies" && <OpeningStudyPlan slug={slug} />}
+      {tab === "ask" && <AskAssistant slug={slug} playerName={player?.full_name} />}
     </Screen>
   );
 }
