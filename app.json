@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mbaku Preparatory",
     "slug": "chess-tracker-mobile-app",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.mbakupreparatory.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.POST_NOTIFICATIONS",
@@ -45,7 +45,8 @@
           "icon": "./assets/notification-icon.png",
           "color": "#0074C5"
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

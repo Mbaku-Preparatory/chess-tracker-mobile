@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://mbaku-preparatory-production.up.railway.app/api"
+        "EXPO_PUBLIC_API_BASE_URL": "https://mbaku-preparatory-production.up.railway.app/api",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://6c9ce892a322cded660e4d0f37b9f59e@o4511895252434944.ingest.us.sentry.io/4511895302307840"
       }
     },
     "preview": {
@@ -17,7 +18,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://mbaku-preparatory-production.up.railway.app/api"
+        "EXPO_PUBLIC_API_BASE_URL": "https://mbaku-preparatory-production.up.railway.app/api",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://6c9ce892a322cded660e4d0f37b9f59e@o4511895252434944.ingest.us.sentry.io/4511895302307840"
       }
     },
     "production": {
@@ -25,7 +27,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://mbaku-preparatory-production.up.railway.app/api"
+        "EXPO_PUBLIC_API_BASE_URL": "https://mbaku-preparatory-production.up.railway.app/api",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://6c9ce892a322cded660e4d0f37b9f59e@o4511895252434944.ingest.us.sentry.io/4511895302307840"
       }
     }
   },

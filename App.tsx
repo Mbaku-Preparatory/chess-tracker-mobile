@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import { hydrateAuthStorage } from "@/lib/auth";
 import { hydrateThemeStorage } from "@/lib/themeStorage";
 import { store } from "@/redux/store";
+import { useAppSelector } from "@/redux/hooks";
 import { loadThemeFromStorage } from "@/redux/actions/theme";
 import { StoreProvider } from "@/redux/provider";
 import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
@@ -15,12 +16,20 @@ import { navigationRef } from "@/navigation/navigationRef";
 import { RootNavigator } from "@/navigation/RootNavigator";
 import { UpdateRequiredScreen } from "@/screens/UpdateRequiredScreen";
 import { checkVersionGate, type VersionGate } from "@/lib/appVersion";
+import { identifyUser } from "@/lib/monitoring";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
 import { ActiveImportsIndicator } from "@/components/import/ActiveImportsIndicator";
 
 function AppShell() {
   const t = useTheme();
   const [gate, setGate] = useState<VersionGate | null>(null);
+  const email = useAppSelector((s) => s.auth.email);
+
+  // Attaches the signed-in reviewer to crash reports, and detaches on sign-out,
+  // so several people's crashes can be told apart. No-ops without a DSN.
+  useEffect(() => {
+    identifyUser(email);
+  }, [email]);
 
   // Checked once per launch. Failures resolve to null and are ignored, so an offline start or a
   // backend outage never blocks the app - see checkVersionGate.
