@@ -24,6 +24,9 @@ import { useTheme } from "@/theme/ThemeContext";
 
 const BRAND = "#1a3a6b";
 
+// Provisional — the backend carries the same name in ASSISTANT_NAME.
+const ASSISTANT_NAME = "Mbaku";
+
 const SUGGESTED = [
   "Which openings do they play most?",
   "Where do they score worst?",
@@ -78,9 +81,11 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
           <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={st.headerLabel}>ASK THE ASSISTANT</Text>
+          <Text style={st.headerLabel}>ASK {ASSISTANT_NAME.toUpperCase()}</Text>
           <Text style={st.headerTitle} numberOfLines={1}>
-            {playerName ? `Questions about ${playerName}` : "Ask about this player"}
+            {playerName
+              ? `${ASSISTANT_NAME} on ${playerName}`
+              : `Ask ${ASSISTANT_NAME} about this player`}
           </Text>
         </View>
       </View>
@@ -89,7 +94,7 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
         <TextInput
           value={question}
           onChangeText={(v) => setQuestion(v.slice(0, MAX_QUESTION))}
-          placeholder="e.g. which opening do they score worst with?"
+          placeholder={`Ask ${ASSISTANT_NAME} — e.g. where do they score worst?`}
           placeholderTextColor={t.textMuted}
           multiline
           editable={!loading}
