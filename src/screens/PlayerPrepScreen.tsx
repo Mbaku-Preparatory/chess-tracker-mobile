@@ -19,11 +19,12 @@ type Props = NativeStackScreenProps<RootStackParamList, "PlayerPrep">;
 type PrepTab = "tree" | "studies" | "ask";
 
 export function PlayerPrepScreen({ route, navigation }: Props) {
-  const { slug } = route.params;
+  const { slug, tab: initialTab } = route.params;
   const t = useTheme();
   const dispatch = useAppDispatch();
   const { player, loading } = useAppSelector((s) => s.playerDetail);
-  const [tab, setTab] = useState<PrepTab>("tree");
+  // `tab` lets the profile screen deep-link straight into Mbaku.
+  const [tab, setTab] = useState<PrepTab>(initialTab ?? "tree");
 
   useEffect(() => {
     if (slug) dispatch(fetchPlayerDetail(slug));

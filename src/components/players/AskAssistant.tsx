@@ -14,7 +14,12 @@ import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeContext";
 
 /**
- * Ask a question about one opponent, answered from the games we hold on them.
+ * Ask Mbaku about one opponent, answered from the games we hold on them.
+ *
+ * The thread is held server-side: we send a conversation id and the backend
+ * replays the earlier turns, so a follow-up like "why did you say that?" has
+ * something to refer back to. The client never tells the server what Mbaku said
+ * last turn, which is what stops a forged assistant turn steering the answer.
  *
  * The suggested questions are the categories from AI-ASSISTANT-EVALS.md, and
  * the last one is deliberately unanswerable — we store no rating history, so
@@ -38,6 +43,11 @@ const SUGGESTED = [
 // Matches QUESTION_MAX_LENGTH in players/services/assistant.py.
 const MAX_QUESTION = 500;
 
+interface Turn {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface AskAssistantProps {
   slug: string;
   playerName?: string;
@@ -46,8 +56,8 @@ interface AskAssistantProps {
 export function AskAssistant({ slug, playerName }: AskAssistantProps) {
   const t = useTheme();
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [asked, setAsked] = useState<string | null>(null);
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [conversationId, setConversationId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -57,12 +67,13 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
 
     setLoading(true);
     setError(null);
-    setAnswer(null);
-    setAsked(trimmed);
+    setQuestion("");
+    setTurns((prev) => [...prev, { role: "user", content: trimmed }]);
 
     try {
-      const result = await api.askAboutPlayer(slug, trimmed);
-      setAnswer(result.answer);
+      const result = await api.askAboutPlayer(slug, trimmed, conversationId);
+      setConversationId(result.conversation_id);
+      setTurns((prev) => [...prev, { role: "assistant", content: result.answer }]);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Something went wrong. Try again.",
@@ -70,6 +81,12 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function reset() {
+    setTurns([]);
+    setConversationId(null);
+    setError(null);
   }
 
   const canSend = !loading && question.trim().length > 0;
@@ -88,13 +105,57 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
               : `Ask ${ASSISTANT_NAME} about this player`}
           </Text>
         </View>
+        {turns.length > 0 && (
+          <Pressable onPress={reset} hitSlop={8}>
+            <Text style={st.newChat}>New chat</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={st.body}>
+        {turns.map((turn, i) =>
+          turn.role === "user" ? (
+            <View key={i} style={st.userBubble}>
+              <Text style={st.userText}>{turn.content}</Text>
+            </View>
+          ) : (
+            <View key={i} style={[st.answer, { backgroundColor: t.elevated }]}>
+              {/* Mbaku writes prose with blank lines between paragraphs. */}
+              {turn.content
+                .split(/\n{2,}/)
+                .filter((p) => p.trim())
+                .map((para, j) => (
+                  <Text key={j} style={{ fontSize: 14, lineHeight: 21, color: t.text }}>
+                    {para.trim()}
+                  </Text>
+                ))}
+            </View>
+          ),
+        )}
+
+        {loading && (
+          <View style={[st.status, { backgroundColor: t.elevated }]}>
+            <ActivityIndicator size="small" color={BRAND} />
+            <Text style={{ fontSize: 13, color: t.textMuted }}>
+              Reading {playerName ? `${playerName}'s` : "their"} games…
+            </Text>
+          </View>
+        )}
+
+        {error && !loading && (
+          <View style={[st.status, { backgroundColor: t.dangerBg }]}>
+            <Text style={{ fontSize: 13, color: t.danger }}>{error}</Text>
+          </View>
+        )}
+
         <TextInput
           value={question}
           onChangeText={(v) => setQuestion(v.slice(0, MAX_QUESTION))}
-          placeholder={`Ask ${ASSISTANT_NAME} — e.g. where do they score worst?`}
+          placeholder={
+            turns.length
+              ? "Ask a follow-up…"
+              : `Ask ${ASSISTANT_NAME} — e.g. where do they score worst?`
+          }
           placeholderTextColor={t.textMuted}
           multiline
           editable={!loading}
@@ -121,72 +182,35 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
           </Pressable>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={st.chips}
-        >
-          {SUGGESTED.map((s) => (
-            <Pressable
-              key={s}
-              onPress={() => {
-                setQuestion(s);
-                ask(s);
-              }}
-              disabled={loading}
-              style={[
-                st.chip,
-                {
-                  borderColor: t.border,
-                  backgroundColor: t.elevated,
-                  opacity: loading ? 0.5 : 1,
-                },
-              ]}
-            >
-              <Text style={{ fontSize: 12, color: t.textMuted }}>{s}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {loading && (
-          <View style={[st.status, { backgroundColor: t.elevated }]}>
-            <ActivityIndicator size="small" color={BRAND} />
-            <Text style={{ fontSize: 13, color: t.textMuted }}>
-              Reading {playerName ? `${playerName}'s` : "their"} games…
-            </Text>
-          </View>
+        {turns.length === 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={st.chips}
+          >
+            {SUGGESTED.map((s) => (
+              <Pressable
+                key={s}
+                onPress={() => ask(s)}
+                disabled={loading}
+                style={[
+                  st.chip,
+                  {
+                    borderColor: t.border,
+                    backgroundColor: t.elevated,
+                    opacity: loading ? 0.5 : 1,
+                  },
+                ]}
+              >
+                <Text style={{ fontSize: 12, color: t.textMuted }}>{s}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         )}
 
-        {error && !loading && (
-          <View style={[st.status, { backgroundColor: t.dangerBg }]}>
-            <Text style={{ fontSize: 13, color: t.danger }}>{error}</Text>
-          </View>
-        )}
-
-        {answer && !loading && (
-          <View style={{ gap: 8 }}>
-            {asked && (
-              <Text style={{ fontSize: 13, fontWeight: "700", color: t.text }}>
-                {asked}
-              </Text>
-            )}
-            {/* The model separates paragraphs with blank lines; render them as
-                paragraphs rather than one unbroken block. */}
-            <View style={[st.answer, { backgroundColor: t.elevated }]}>
-              {answer
-                .split(/\n{2,}/)
-                .filter((p) => p.trim())
-                .map((para, i) => (
-                  <Text key={i} style={{ fontSize: 14, lineHeight: 21, color: t.text }}>
-                    {para.trim()}
-                  </Text>
-                ))}
-            </View>
-            <Text style={{ fontSize: 11, color: t.textMuted }}>
-              Answered only from the games imported for this player.
-            </Text>
-          </View>
-        )}
+        <Text style={{ fontSize: 11, color: t.textMuted }}>
+          Answered only from the games imported for this player.
+        </Text>
       </View>
     </View>
   );
@@ -217,7 +241,18 @@ const st = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
   },
   headerTitle: { fontSize: 16, fontWeight: "700", color: "#fff" },
+  newChat: { fontSize: 12, fontWeight: "600", color: "rgba(255,255,255,0.8)" },
   body: { padding: 16, gap: 12 },
+  userBubble: {
+    alignSelf: "flex-end",
+    maxWidth: "85%",
+    backgroundColor: BRAND,
+    borderRadius: 16,
+    borderBottomRightRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  userText: { color: "#fff", fontSize: 14, fontWeight: "500" },
   input: {
     borderWidth: 1,
     borderRadius: 12,
@@ -239,5 +274,12 @@ const st = StyleSheet.create({
   chips: { gap: 8, paddingRight: 8 },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   status: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, padding: 14 },
-  answer: { borderRadius: 12, padding: 14, gap: 10 },
+  answer: {
+    alignSelf: "flex-start",
+    maxWidth: "95%",
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    padding: 14,
+    gap: 10,
+  },
 });

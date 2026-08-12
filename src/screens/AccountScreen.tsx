@@ -13,7 +13,11 @@ import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@/types";
 import { userMessage } from "@/lib/apiError";
-import { TipSection } from "@/components/TipSection";
+// TipSection is hidden until M-Pesa go-live — MPESA_SHORTCODE is still
+// Safaricom's shared sandbox paybill, so money paid here would reach their
+// test account rather than ours. The component is kept intact; restore this
+// import and the <TipSection /> below once a real shortcode is live.
+// import { TipSection } from "@/components/TipSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Account">;
 
@@ -172,7 +176,7 @@ export function AccountScreen({ navigation }: Props) {
           the thing you find at the bottom, not the thing that greets you. */}
       <View style={{ height: 28 }} />
       <Text style={[st.sectionLabel, { color: t.textMuted }]}>SUPPORT</Text>
-      <TipSection />
+      {/* <TipSection /> — hidden until M-Pesa go-live, see import above */}
 
       <View style={{ height: 24 }} />
       <Button title="Back" variant="ghost" onPress={() => navigation.goBack()} />

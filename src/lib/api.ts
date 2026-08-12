@@ -181,11 +181,16 @@ export const api = {
    * Ask a natural-language question about one opponent. Answered only from the
    * data we hold on them — the backend never lets the model invent a statistic.
    */
-  askAboutPlayer(slug: string, question: string): Promise<{ answer: string }> {
+  askAboutPlayer(
+    slug: string,
+    question: string,
+    conversationId?: number | null,
+  ): Promise<{ answer: string; conversation_id: number }> {
     return fetchJson(`${API_BASE}/players/${slug}/ask/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      // Omitted on the first question; the response carries the id to send back.
+      body: JSON.stringify({ question, conversation_id: conversationId ?? undefined }),
     });
   },
 
