@@ -44,9 +44,10 @@ const SUGGESTED = [
 // Matches QUESTION_MAX_LENGTH in players/services/assistant.py.
 const MAX_QUESTION = 500;
 
-// How long each fact stays up while Mbaku is thinking. Long enough to read
-// a sentence without hurrying, short enough that a 15s wait shows three.
-const FACT_INTERVAL_MS = 5000;
+// How long each fact stays up while Mbaku is thinking. Ten seconds reads
+// comfortably — most answers arrive before the second fact, so a swap mid-read
+// is the exception rather than something you fight.
+const FACT_INTERVAL_MS = 10000;
 
 interface Turn {
   role: "user" | "assistant";
