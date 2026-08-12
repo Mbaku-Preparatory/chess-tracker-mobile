@@ -38,7 +38,15 @@ export function Screen({
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top", "left", "right", "bottom"]}>
       {header && <AppHeader />}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      {/* Android needs a behavior too. With `undefined` the view is inert, so
+          the keyboard simply covered whatever you were typing into — which is
+          how it shipped, and why the chat input was unusable on a phone.
+          "height" is the one that behaves under Expo's default `resize` mode;
+          "padding" is right on iOS. */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         {content}
       </KeyboardAvoidingView>
     </SafeAreaView>

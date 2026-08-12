@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeContext";
+import { shuffledFacts, type ChessFact } from "@/lib/chessFacts";
 
 /**
  * Ask Mbaku about one opponent, answered from the games we hold on them.
@@ -43,9 +44,54 @@ const SUGGESTED = [
 // Matches QUESTION_MAX_LENGTH in players/services/assistant.py.
 const MAX_QUESTION = 500;
 
+// How long each fact stays up while Mbaku is thinking. Long enough to read
+// a sentence without hurrying, short enough that a 15s wait shows three.
+const FACT_INTERVAL_MS = 5000;
+
 interface Turn {
   role: "user" | "assistant";
   content: string;
+}
+
+/**
+ * Something to read while Mbaku thinks.
+ *
+ * A fifteen-second spinner reads as broken; the same wait with a fact reads as
+ * work being done. Mounted only while a request is in flight, so the interval
+ * is created and cleared with the wait rather than running all the time.
+ */
+function ThinkingFacts({ playerName }: { playerName?: string }) {
+  const t = useTheme();
+  // Shuffled once per wait, not per render — a new order each time you ask,
+  // but stable while this particular answer is coming back.
+  const facts = useRef<ChessFact[]>(shuffledFacts()).current;
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(
+      () => setIndex((i) => (i + 1) % facts.length),
+      FACT_INTERVAL_MS,
+    );
+    return () => clearInterval(id);
+  }, [facts.length]);
+
+  return (
+    <View style={[st.thinking, { backgroundColor: t.elevated }]}>
+      <View style={st.thinkingHead}>
+        <ActivityIndicator size="small" color={BRAND} />
+        <Text style={{ fontSize: 13, fontWeight: "600", color: t.textMuted }}>
+          Reading {playerName ? `${playerName}'s` : "their"} games…
+        </Text>
+      </View>
+      <View style={st.factDivider} />
+      <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1, color: BRAND }}>
+        DID YOU KNOW
+      </Text>
+      <Text style={{ fontSize: 13, lineHeight: 19, color: t.text }}>
+        {facts[index].text}
+      </Text>
+    </View>
+  );
 }
 
 interface AskAssistantProps {
@@ -133,14 +179,7 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
           ),
         )}
 
-        {loading && (
-          <View style={[st.status, { backgroundColor: t.elevated }]}>
-            <ActivityIndicator size="small" color={BRAND} />
-            <Text style={{ fontSize: 13, color: t.textMuted }}>
-              Reading {playerName ? `${playerName}'s` : "their"} games…
-            </Text>
-          </View>
-        )}
+        {loading && <ThinkingFacts playerName={playerName} />}
 
         {error && !loading && (
           <View style={[st.status, { backgroundColor: t.dangerBg }]}>
@@ -148,13 +187,19 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
           </View>
         )}
 
+        {/* Locked while an answer is coming back. A second question sent
+            mid-flight would race the first into the same thread and arrive in
+            whichever order the two requests happened to finish — so the input
+            says why it is closed rather than just ignoring the keystrokes. */}
         <TextInput
           value={question}
           onChangeText={(v) => setQuestion(v.slice(0, MAX_QUESTION))}
           placeholder={
-            turns.length
-              ? "Ask a follow-up…"
-              : `Ask ${ASSISTANT_NAME} — e.g. where do they score worst?`
+            loading
+              ? `${ASSISTANT_NAME} is thinking…`
+              : turns.length
+                ? "Ask a follow-up…"
+                : `Ask ${ASSISTANT_NAME} — e.g. where do they score worst?`
           }
           placeholderTextColor={t.textMuted}
           multiline
@@ -162,6 +207,7 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
           style={[
             st.input,
             { borderColor: t.border, color: t.text, backgroundColor: t.elevated },
+            loading && { opacity: 0.55 },
           ]}
         />
 
@@ -274,6 +320,9 @@ const st = StyleSheet.create({
   chips: { gap: 8, paddingRight: 8 },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   status: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, padding: 14 },
+  thinking: { borderRadius: 12, padding: 14, gap: 8 },
+  thinkingHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  factDivider: { height: 1, backgroundColor: "rgba(127,127,127,0.18)", marginVertical: 2 },
   answer: {
     alignSelf: "flex-start",
     maxWidth: "95%",
