@@ -230,18 +230,21 @@ export default function MyProfileScreen({ navigation }: Props) {
         </SectionContainer>
       )}
 
+      {/* Deliberately not pushing PlayerDetail: that screen is a scouting
+          report on an opponent, and the viewer is not one. The games and prep
+          screens are neutral — they render whichever player they are given. */}
       {gamesCount > 0 && (
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
-          <Button
-            title="Full profile"
-            variant="secondary"
-            onPress={() => navigation.navigate("PlayerDetail", { slug: player.slug })}
-            style={{ flex: 1 }}
-          />
           <Button
             title="All games"
             variant="secondary"
             onPress={() => navigation.navigate("PlayerGames", { slug: player.slug })}
+            style={{ flex: 1 }}
+          />
+          <Button
+            title="Openings"
+            variant="secondary"
+            onPress={() => navigation.navigate("PlayerPrep", { slug: player.slug })}
             style={{ flex: 1 }}
           />
         </View>
