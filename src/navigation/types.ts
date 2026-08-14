@@ -26,5 +26,6 @@ export type RootStackParamList = {
   Setup: undefined;
   SessionNew: undefined;
   SessionDetail: { id: number };
+  MyProfile: undefined;
   Account: undefined;
 };

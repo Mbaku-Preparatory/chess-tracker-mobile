@@ -572,6 +572,22 @@ export interface ActiveImportJob extends ImportJob {
   player_slug: string;
 }
 
+/**
+ * The signed-in user's own profile, from /api/me/player/.
+ *
+ * `player` is a plain PlayerDetail on purpose — their profile is a player
+ * record like any other, so everything built for the player screens works on
+ * it without a second set of components to keep in step.
+ *
+ * `import_job` is the most recent import, not only a running one. A profile
+ * whose import finished with nothing found has to be able to say so, and that
+ * is indistinguishable from "never started" if finished jobs are dropped.
+ */
+export interface MyPlayer {
+  player: PlayerDetail;
+  import_job: ImportJob | null;
+}
+
 // ── Payments ─────────────────────────────────────────────────────────────────
 
 export type PaymentStatus = "pending" | "completed" | "failed";
