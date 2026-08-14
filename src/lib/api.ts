@@ -127,11 +127,11 @@ export const api = {
    * Returns immediately; the worker does the fetching. Poll `import_job`
    * with getImportJob() to follow it.
    */
-  setMyFideId(fideId: string): Promise<MyPlayer> {
+  setMyFideId(fideId: string, fullHistory = false): Promise<MyPlayer> {
     return fetchJson(`${API_BASE}/me/player/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fide_id: fideId }),
+      body: JSON.stringify({ fide_id: fideId, full_history: fullHistory }),
     });
   },
 
