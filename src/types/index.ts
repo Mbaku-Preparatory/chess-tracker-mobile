@@ -573,8 +573,24 @@ export interface ActiveImportJob extends ImportJob {
 }
 
 // ── Payments ─────────────────────────────────────────────────────────────────
-//
-// No payment types at present. The Daraja/M-Pesa `Payment` shape was removed on
-// 2026-08-12 along with the integration behind it; Paystack's join key is a
-// reference we choose rather than a Safaricom checkout id, so nothing here was
-// worth keeping. Recoverable from git history.
+
+export type PaymentStatus = "pending" | "completed" | "failed";
+
+/** Mirrors _serialize_payment in payments/views.py. */
+export interface Payment {
+  /** The id everywhere: what we poll, and what Paystack names in every event. */
+  reference: string;
+  status: PaymentStatus;
+  amount: string;
+  currency: string;
+  /** "mobile_money", "card"… Empty until the payer has chosen one. */
+  channel: string;
+  /** Paystack's hosted checkout page. Where the payer is sent. */
+  authorization_url: string;
+  /** Our wording, derived from status. Null unless failed. */
+  failure_reason: string | null;
+  created_at: string;
+  completed_at: string | null;
+  /** Present on create: true when an unfinished checkout was handed back. */
+  reused_existing?: boolean;
+}

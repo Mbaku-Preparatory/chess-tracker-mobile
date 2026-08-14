@@ -8,6 +8,7 @@ import { sendTestNotification } from "@/lib/notifications";
 import { APP_VERSION, BUILD_NUMBER } from "@/lib/appVersion";
 import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
+import { TipSection } from "@/components/TipSection";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
@@ -167,9 +168,10 @@ export function AccountScreen({ navigation }: Props) {
         />
       </View>
 
-      {/* A SUPPORT section lived here, below everything else — asking for money
-          should be what you find at the bottom, not what greets you. Worth
-          restoring in that same position when Paystack tipping ships. */}
+      {/* Support — last on the page on purpose. Asking for money should be the
+          thing you find at the bottom, not the thing that greets you. */}
+      <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>SUPPORT</Text>
+      <TipSection />
 
       <View style={{ height: 24 }} />
       <Button title="Back" variant="ghost" onPress={() => navigation.goBack()} />
