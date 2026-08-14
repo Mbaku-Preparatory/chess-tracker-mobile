@@ -7,19 +7,25 @@
 | Application id | `com.mbakupreparatory.app` |
 | Store name | Mbaku Preparatory |
 | Backend | `https://mbaku-preparatory-production.up.railway.app/api` |
-| Privacy policy | `https://mbaku-preparatory.vercel.app/privacy` — **not live yet, see below** |
+| Privacy policy | `https://mbaku-preparatory.vercel.app/privacy` |
 
 The application id is **permanent**. Google Play binds a listing to it forever;
 changing it means publishing a brand-new app with zero installs and reviews.
 
-> **The privacy policy URL needs attention before release.** This table used to
-> name `chess-tracker-frontend.vercel.app`, which is not ours — that name now
-> serves an unrelated chess site, so the listing was pointing users and Google
-> at a stranger's page. The correct host is `mbaku-preparatory.vercel.app`, but
-> `/privacy` there currently 404s: the page exists only on the unmerged
-> `privacy-policy` branch. Merge and deploy that branch, confirm the URL loads,
-> and update the link in the Play Console listing — the value there is separate
-> from this file.
+> **The URL above is live and returns 200 signed out**, which is how a reviewer
+> opens it. Two things still need doing by hand, because neither lives in this
+> repo: the **Play Console listing** must be pointed at it (it historically named
+> `chess-tracker-frontend.vercel.app`, which is *not ours* and now serves an
+> unrelated chess site), and the same URL goes in the **Data safety** form's
+> privacy policy field.
+>
+> **Keep the policy and the binary in step.** On 2026-08-13 the policy still said
+> the app contained "no analytics, advertising, crash-reporting or tracking SDKs
+> of any kind" — two days after Sentry shipped in `1.0.4`. A policy that
+> contradicts the binary is grounds for suspension *after* approval, which is far
+> worse than a rejection. Any SDK that sends data off the device changes three
+> things at once: the policy page, the Data safety answers below, and the
+> in-app disclosure. Change all three or none.
 
 ## Build
 
@@ -105,21 +111,40 @@ native config belongs in `app.json`.
 
 ## Play Console — Data Safety answers
 
-Verified against the code, not assumed:
+Verified against the code, not assumed. Re-verified 2026-08-13 after Sentry and
+the Mbaku assistant shipped — the previous version of this table was written
+before both and answered "no" where the answer is now "yes".
 
 | Question | Answer |
 |---|---|
 | Collects data? | Yes |
-| Name, email address | Collected, required, for account management |
+| Name, email address | Collected, required, for account management. **Also sent to Sentry** — `identifyUser()` attaches the signed-in email to crash reports |
 | Photos | **Not collected** — profile picture is written to device local storage only, never uploaded |
 | Location, contacts, calendar, financial info | Not collected |
-| App activity / analytics | **Not collected** — no analytics, ads, or crash-reporting SDK in the project |
+| App activity — other user-generated content | **Collected** — questions asked of Mbaku and the answers, stored against the account and sent to Anthropic |
+| App info and performance — crash logs, diagnostics | **Collected** — `@sentry/react-native`, see `src/lib/monitoring.ts` |
+| Advertising / tracking | None. No ad SDK, no ad ID, `tracesSampleRate: 0` |
 | Data encrypted in transit? | Yes (HTTPS) |
-| Users can request deletion? | Yes — by email, per the privacy policy |
-| Shared with third parties? | No |
+| Users can request deletion? | Yes — in-app, Account → Danger zone, plus by email per the policy |
+
+**The one row worth reading the Console's own wording on: "shared".** Google
+distinguishes *shared* (transferred to another company for their own use) from
+*processed by a service provider on your behalf*. Sentry and Anthropic are the
+latter — they process under our instruction, and Anthropic's API terms do not
+train on the data. That makes "No" to sharing defensible, but it is the answer
+most likely to be second-guessed, so answer it deliberately rather than by
+habit, and make sure the policy page names both companies (it does, under
+"Where your data is stored").
 
 Chess.com, Lichess, chess-results.org and FIDE are read *from* on the user's
 instruction; no user data is sent to them.
+
+### What ships in the binary that touches data
+
+| SDK | What leaves the device | Where it is configured |
+|---|---|---|
+| `@sentry/react-native` | Stack traces, device model, OS and app version, navigation breadcrumbs, signed-in email. Not field contents (`sendDefaultPii: false`), off in dev | `src/lib/monitoring.ts` |
+| Mbaku assistant (via our backend) | The question, plus an opponent briefing built from stored game data. No email, no password, no prep notes | `players/services/assistant.py` (backend) |
 
 ## Still needs a human
 
@@ -127,5 +152,10 @@ instruction; no user data is sent to them.
   can itself take days — start it first if it isn't done.
 - Store listing: short + full description, feature graphic (1024×500), at least
   two phone screenshots, app category, content rating questionnaire.
-- Closed testing track: Play now requires personal-account developers to run a
-  closed test with a minimum number of testers before production access.
+- Closed testing track: for a **personal** developer account, Play requires a
+  closed test with **12 testers opted in continuously for 14 days** before you
+  can apply for production access. Plan around it — it is a calendar
+  dependency, not a task. Recruit the twelve *before* uploading, because the
+  fourteen days start when they are all in, and a tester who opts out resets
+  their own contribution. Verify the current threshold in the Console; Google
+  has changed these numbers before.

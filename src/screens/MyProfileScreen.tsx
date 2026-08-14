@@ -181,7 +181,7 @@ export default function MyProfileScreen({ navigation }: Props) {
 
       {/* Finished, but found nothing. Saying so is the whole reason the payload
           carries the most recent job rather than only a running one. */}
-      {!inFlight && job && job.total === 0 && !!player.fide_id && (
+      {!inFlight && job && job.games_imported === 0 && !!player.fide_id && (
         <SectionContainer title="No games found">
           <Text style={{ color: t.textMuted, fontSize: 13 }}>
             We couldn&apos;t find tournaments for FIDE ID {player.fide_id} on
@@ -201,17 +201,18 @@ export default function MyProfileScreen({ navigation }: Props) {
         </SectionContainer>
       )}
 
-      {/* The signup import takes the 20 most recent events. Anyone with a
-          longer career needs a way to ask for the rest, and this is the only
-          place they would look for it. */}
-      {!!player.fide_id && !inFlight && gamesCount > 0 && (
-        <SectionContainer title="Older games">
+      {/* Runs a fresh import. Deliberately NOT gated on having games already:
+          somebody whose import found nothing is the exact person who needs to
+          retry, and gating it left them a dead end. */}
+      {!!player.fide_id && !inFlight && (
+        <SectionContainer title={gamesCount > 0 ? "Older games" : "Fetch your games"}>
           <Text style={{ color: t.textMuted, fontSize: 13 }}>
-            Signing up imported your 20 most recent tournaments. If you have
-            played longer than that, pull in the rest.
+            {gamesCount > 0
+              ? "Signing up imported your 20 most recent tournaments. If you have played longer than that, pull in the rest."
+              : "Search chess-results for every tournament under your FIDE ID and import the games."}
           </Text>
           <Button
-            title={saving ? "Starting…" : "Import my full history"}
+            title={saving ? "Starting…" : gamesCount > 0 ? "Import my full history" : "Import my games"}
             variant="secondary"
             disabled={saving}
             onPress={async () => {

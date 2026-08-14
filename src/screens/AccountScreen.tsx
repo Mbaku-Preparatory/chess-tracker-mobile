@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { sendTestNotification } from "@/lib/notifications";
 import { APP_VERSION, BUILD_NUMBER } from "@/lib/appVersion";
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, accountDeletionMailto } from "@/lib/links";
 import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
 import { TipSection } from "@/components/TipSection";
@@ -26,6 +27,42 @@ function ReadOnlyRow({ label, value }: { label: string; value: string }) {
         {value}
       </Text>
     </View>
+  );
+}
+
+function LinkRow({
+  label,
+  hint,
+  onPress,
+  danger = false,
+}: {
+  label: string;
+  hint?: string;
+  onPress: () => void;
+  danger?: boolean;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        st.row,
+        { borderColor: t.border, opacity: pressed ? 0.6 : 1, alignItems: "flex-start" },
+      ]}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: danger ? t.danger : t.brand(600), fontSize: 14, fontWeight: "500" }}>
+          {label}
+        </Text>
+        {hint && (
+          <Text style={{ color: t.textFaint, fontSize: 12, marginTop: 3, lineHeight: 16 }}>
+            {hint}
+          </Text>
+        )}
+      </View>
+      <Text style={{ color: t.textFaint, fontSize: 16 }}>›</Text>
+    </Pressable>
   );
 }
 
@@ -87,6 +124,47 @@ export function AccountScreen({ navigation }: Props) {
       ok
         ? "A test reminder will arrive in about 5 seconds."
         : "Notifications are blocked for this app. Enable them in Settings › Apps › Mbaku Preparatory › Notifications."
+    );
+  }
+
+  async function handleOpenPrivacy() {
+    try {
+      await Linking.openURL(PRIVACY_POLICY_URL);
+    } catch {
+      // No browser, or the intent was refused. The URL itself is the useful
+      // thing here, so show it rather than a dead end — this link is the one
+      // the Play listing promises is reachable inside the app.
+      Alert.alert("Privacy policy", PRIVACY_POLICY_URL);
+    }
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      "Delete your account?",
+      "This removes your account and every game, opponent and prep session on it. " +
+        "It cannot be undone.\n\n" +
+        "Deletion is handled by email so we can confirm the request comes from you. " +
+        "We action it and confirm within 30 days.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Email the request",
+          style: "destructive",
+          onPress: async () => {
+            const url = accountDeletionMailto(profile?.username ?? "");
+            try {
+              await Linking.openURL(url);
+            } catch {
+              // A device with no mail client must not be a device with no way
+              // out — fall back to showing the address to write to by hand.
+              Alert.alert(
+                "No email app found",
+                `Send your deletion request to ${SUPPORT_EMAIL} from the address registered to your account.`
+              );
+            }
+          },
+        },
+      ]
     );
   }
 
@@ -152,6 +230,18 @@ export function AccountScreen({ navigation }: Props) {
         </>
       )}
 
+      <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>MY CHESS</Text>
+      <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+        {/* The account holder as a player, not as a login. Everything above
+            this point edits who you are to us; this is who you are over a
+            board. */}
+        <LinkRow
+          label="My profile"
+          hint="Your FIDE rating, your games, and Mbaku on your own play."
+          onPress={() => navigation.navigate("MyProfile")}
+        />
+      </View>
+
       <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>NOTIFICATIONS</Text>
       <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border, padding: 14 }]}>
         <Text style={{ color: t.textMuted, fontSize: 13, marginBottom: 12 }}>
@@ -165,6 +255,27 @@ export function AccountScreen({ navigation }: Props) {
         <ReadOnlyRow
           label="App version"
           value={BUILD_NUMBER ? `${APP_VERSION} (build ${BUILD_NUMBER})` : APP_VERSION}
+        />
+        {/* Play's User Data policy wants the policy reachable from inside the
+            app, not only from the store listing — and a reviewer looks for it
+            here. It covers crash reporting and what Mbaku sends to Anthropic. */}
+        <LinkRow
+          label="Privacy policy"
+          hint="What we collect, who processes it, and how to get it deleted."
+          onPress={handleOpenPrivacy}
+        />
+      </View>
+
+      <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>DANGER ZONE</Text>
+      <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+        {/* Play requires an in-app route to request deletion for any app that
+            lets you create an account. Email is the honest mechanism today —
+            a real DELETE endpoint would be better and is worth building. */}
+        <LinkRow
+          label="Delete my account"
+          hint="Removes your account and all of its data. This cannot be undone."
+          onPress={handleDeleteAccount}
+          danger
         />
       </View>
 
