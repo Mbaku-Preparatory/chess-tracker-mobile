@@ -24,10 +24,37 @@ import { StatStrip } from "@/components/ui/StatCard";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { AskAssistant } from "@/components/players/AskAssistant";
+import { shuffledFacts, type ChessFact } from "@/lib/chessFacts";
 import type { ImportJob, MyPlayer } from "@/types";
 import type { RootStackParamList } from "@/navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "MyProfile">;
+
+/** Rotating facts while the import runs — same cadence the assistant uses. */
+const ROTATE_MS = 10_000;
+
+function ImportFact() {
+  const t = useTheme();
+  const facts = useRef<ChessFact[]>(shuffledFacts()).current;
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setIndex((i) => (i + 1) % facts.length), ROTATE_MS);
+    return () => clearInterval(id);
+  }, [facts.length]);
+
+  if (!facts.length) return null;
+  return (
+    <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: t.border, paddingTop: 10 }}>
+      <Text style={{ color: t.textMuted, fontSize: 11, letterSpacing: 1, textTransform: "uppercase" }}>
+        While you wait
+      </Text>
+      <Text style={{ color: t.textMuted, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
+        {facts[index].text}
+      </Text>
+    </View>
+  );
+}
 
 /** Statuses in which the worker still has something to do for us. */
 const IN_FLIGHT = ["pending", "running"];
@@ -176,6 +203,7 @@ export default function MyProfileScreen({ navigation }: Props) {
           <Text style={{ color: t.textMuted, fontSize: 12, marginTop: 4 }}>
             You can close the app. We&apos;ll email you when it&apos;s done.
           </Text>
+          <ImportFact />
         </SectionContainer>
       )}
 
