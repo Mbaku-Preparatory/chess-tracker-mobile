@@ -343,13 +343,6 @@ export interface PlayerInsights {
   evidence: InsightEvidence;
 }
 
-export interface RepertoireData {
-  white: import("@/redux/actions/repertoire").RepertoireOpening[];
-  black: import("@/redux/actions/repertoire").RepertoireOpening[];
-  onboarding_complete: boolean;
-  updated_at?: string;
-}
-
 export interface OpeningResult {
   slug: string;
   name: string;

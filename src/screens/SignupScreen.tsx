@@ -57,7 +57,7 @@ export function SignupScreen({ navigation }: Props) {
           <Logo size={48} style={{ marginBottom: 14 }} />
           <Text style={[st.title, { color: t.text }]}>Create your account</Text>
           <Text style={[st.subtitle, { color: t.textMuted }]}>
-            Build your repertoire and start scouting opponents.
+            Track your own games and start scouting opponents.
           </Text>
         </View>
 

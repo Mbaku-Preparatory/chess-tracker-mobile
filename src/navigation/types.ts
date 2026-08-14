@@ -23,7 +23,6 @@ export type RootStackParamList = {
   PlayerPrep: { slug: string; tab?: "tree" | "studies" | "ask" };
   PlayerImport: { slug: string; source?: "chesscom" | "lichess" | "chess_results" | "pgn" };
   MasterGames: undefined;
-  Setup: undefined;
   SessionNew: undefined;
   SessionDetail: { id: number };
   MyProfile: undefined;

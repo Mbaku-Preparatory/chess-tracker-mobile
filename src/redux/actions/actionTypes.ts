@@ -26,16 +26,6 @@ export const FETCH_GAMES_PENDING = "games/fetch_pending";
 export const SET_GAMES_FILTERS = "games/setFilters";
 export const RESET_GAMES_FILTERS = "games/resetFilters";
 
-// ── Repertoire ────────────────────────────────────────
-export const FETCH_REPERTOIRE = "repertoire/fetch";
-export const FETCH_REPERTOIRE_PENDING = "repertoire/fetch_pending";
-export const SAVE_REPERTOIRE = "repertoire/save";
-export const SAVE_REPERTOIRE_PENDING = "repertoire/save_pending";
-export const ADD_OPENING = "repertoire/addOpening";
-export const REMOVE_OPENING = "repertoire/removeOpening";
-export const COMPLETE_ONBOARDING = "repertoire/completeOnboarding";
-export const RESET_REPERTOIRE = "repertoire/reset";
-export const SET_REPERTOIRE_INITIALIZED = "repertoire/setInitialized";
 
 // ── Theme ─────────────────────────────────────────────
 export const LOAD_THEME = "theme/load";
