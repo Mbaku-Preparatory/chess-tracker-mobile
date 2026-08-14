@@ -27,6 +27,24 @@ changing it means publishing a brand-new app with zero installs and reviews.
 > things at once: the policy page, the Data safety answers below, and the
 > in-app disclosure. Change all three or none.
 
+## Payments are web-only, on purpose
+
+`TipSection` is gated behind `Platform.OS === "web"` in `AccountScreen`, so the
+packaged Android app contains no way to send money.
+
+Google Play requires its own billing system for in-app purchases. There are
+carve-outs, and a voluntary tip to a developer may well sit inside one — but
+the edge between "donation" and "payment for a digital service" is exactly
+where listings get rejected, and getting it wrong *after* approval is a
+suspension of an application id Google binds to the listing permanently.
+
+The web tip flow is untouched and still takes real money through Paystack.
+
+**Before ungating this**, in order: read Google's current Payments policy on
+donations, answer the Data safety form's financial-info questions, and confirm
+the privacy policy's "Supporting the project" section still matches — it
+currently states in as many words that the Android app does not include this.
+
 ## Build
 
 ```bash

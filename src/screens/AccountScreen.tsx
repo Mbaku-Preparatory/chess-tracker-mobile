@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
@@ -279,10 +279,27 @@ export function AccountScreen({ navigation }: Props) {
         />
       </View>
 
-      {/* Support — last on the page on purpose. Asking for money should be the
-          thing you find at the bottom, not the thing that greets you. */}
-      <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>SUPPORT</Text>
-      <TipSection />
+      {/* Support — web only, and deliberately so.
+          
+          Google Play requires its own billing system for in-app purchases,
+          with carve-outs whose edges (donation vs. tip for a digital service)
+          are exactly where listings get rejected — or worse, suspended after
+          approval, which is unrecoverable for an application id Google binds
+          to the listing forever.
+          
+          The web flow is unaffected and still takes tips. This only hides the
+          entry point in the packaged app. Gated on `!== "web"` rather than on
+          Android specifically, because Apple's rules on the same question are
+          stricter still and this app has an ios target configured.
+          
+          Removing this gate means answering Google's Payments policy first,
+          not just deciding the button looks fine. */}
+      {Platform.OS === "web" && (
+        <>
+          <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>SUPPORT</Text>
+          <TipSection />
+        </>
+      )}
 
       <View style={{ height: 24 }} />
       <Button title="Back" variant="ghost" onPress={() => navigation.goBack()} />
