@@ -118,8 +118,10 @@ export function SignupScreen({ navigation }: Props) {
             autoCorrect={false}
           />
           <Text style={{ color: t.textMuted, fontSize: 12, marginTop: -8 }}>
-            We&apos;ll pull in your rating and recent tournament games, so Mbaku
-            can talk about your own play. You can add this later.
+            We&apos;ll pull in your rating and recent tournament games so
+            Mbaku-bot, the coach built into the app, can talk about your own
+            play — which openings you score worst with, who you struggle
+            against. You can add this later.
           </Text>
 
           <TextField

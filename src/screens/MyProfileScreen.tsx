@@ -252,7 +252,7 @@ export default function MyProfileScreen({ navigation }: Props) {
 
       <SectionContainer title="Ask Mbaku about your play">
         {gamesCount > 0 ? (
-          <AskAssistant slug={player.slug} playerName={player.full_name} />
+          <AskAssistant slug={player.slug} playerName={player.full_name} isSelf />
         ) : (
           <Text style={{ color: t.textMuted, fontSize: 13 }}>
             Once your games are in, Mbaku can go through your openings, your

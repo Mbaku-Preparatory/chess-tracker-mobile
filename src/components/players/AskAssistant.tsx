@@ -41,6 +41,17 @@ const SUGGESTED = [
   "Rating trend over the last three years?",
 ];
 
+// The same five asked about yourself. A separate list rather than a pronoun
+// swap: "How should I prepare against them?" has no first-person form, because
+// the question you ask about your own game is a different question.
+const SUGGESTED_SELF = [
+  "Which openings do I play most?",
+  "Where do I score worst?",
+  "My record against stronger opponents?",
+  "What should I be working on?",
+  "My rating trend over the last three years?",
+];
+
 // Matches QUESTION_MAX_LENGTH in players/services/assistant.py.
 const MAX_QUESTION = 500;
 
@@ -98,9 +109,13 @@ function ThinkingFacts({ playerName }: { playerName?: string }) {
 interface AskAssistantProps {
   slug: string;
   playerName?: string;
+  /** True on the profile screen. The backend independently detects this and
+   *  switches the assistant to second person; this keeps the prompts in step. */
+  isSelf?: boolean;
 }
 
-export function AskAssistant({ slug, playerName }: AskAssistantProps) {
+export function AskAssistant({ slug, playerName, isSelf = false }: AskAssistantProps) {
+  const suggested = isSelf ? SUGGESTED_SELF : SUGGESTED;
   const t = useTheme();
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -242,7 +257,7 @@ export function AskAssistant({ slug, playerName }: AskAssistantProps) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={st.chips}
           >
-            {SUGGESTED.map((s) => (
+            {suggested.map((s) => (
               <Pressable
                 key={s}
                 onPress={() => ask(s)}
