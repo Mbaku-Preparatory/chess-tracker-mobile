@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeContext";
 import { shuffledFacts, type ChessFact } from "@/lib/chessFacts";
+import { Markdown } from "@/components/ui/Markdown";
 
 /**
  * Ask Mbaku about one opponent, answered from the games we hold on them.
@@ -182,15 +183,8 @@ export function AskAssistant({ slug, playerName, isSelf = false }: AskAssistantP
             </View>
           ) : (
             <View key={i} style={[st.answer, { backgroundColor: t.elevated }]}>
-              {/* Mbaku writes prose with blank lines between paragraphs. */}
-              {turn.content
-                .split(/\n{2,}/)
-                .filter((p) => p.trim())
-                .map((para, j) => (
-                  <Text key={j} style={{ fontSize: 14, lineHeight: 21, color: t.text }}>
-                    {para.trim()}
-                  </Text>
-                ))}
+              {/* Mbaku answers in markdown — bold, lists and tables. */}
+              <Markdown content={turn.content} />
             </View>
           ),
         )}
