@@ -127,6 +127,14 @@ export function LichessImportSection({
           )}
         </View>
 
+        {status === "loading" && (
+          // The request is synchronous and held by this component: leaving the
+          // screen or backgrounding the app aborts it, and nothing resumes it.
+          <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 10 }}>
+            Keep the app open — fetching {limit} games can take a minute.
+          </Text>
+        )}
+
         {status === "error" && errorMsg && (
           <View style={[st.errorBox, { backgroundColor: t.dangerBg, borderColor: t.dangerBorder }]}>
             <Text style={{ color: t.danger, fontSize: 12 }}>{errorMsg}</Text>
