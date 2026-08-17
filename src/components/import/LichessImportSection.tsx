@@ -9,7 +9,11 @@ import { ImportResultPanel } from "./ImportResultPanel";
 import type { LichessImportResult, PGNImportResult, PlayerAccount } from "@/types";
 import { userMessage } from "@/lib/apiError";
 
-const LIMITS = [25, 50, 100, 200];
+// 300 is the server's ceiling (LichessImportSerializer.limit), so "fetch more"
+// runs out here. Re-importing is safe: ingest_pgn upserts, so a wider fetch
+// re-reads games we already have rather than duplicating them.
+const LIMITS = [25, 50, 100, 200, 300];
+const MAX_LIMIT = LIMITS[LIMITS.length - 1];
 const LI_COLOR = "#b05000";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -34,7 +38,9 @@ export function LichessImportSection({
 
   const canSubmit = username.trim().length > 0 && status !== "loading";
 
-  async function handleImport() {
+  // Takes the count as an argument rather than reading `limit`: "fetch more"
+  // raises it and re-runs in one go, and the state setter has not landed yet.
+  async function handleImport(fetchLimit: number) {
     if (!canSubmit) return;
     const controller = new AbortController();
     abortRef.current = controller;
@@ -42,7 +48,7 @@ export function LichessImportSection({
     setResult(null);
     setErrorMsg(null);
     try {
-      const data = await api.importFromLichess(slug, { username: username.trim(), limit }, controller.signal);
+      const data = await api.importFromLichess(slug, { username: username.trim(), limit: fetchLimit }, controller.signal);
       setResult(data);
       setStatus("success");
       await onUpdated?.();
@@ -51,6 +57,14 @@ export function LichessImportSection({
       setErrorMsg(userMessage(err, "Import failed. Check the username and try again."));
       setStatus("error");
     }
+  }
+
+  const nextLimit = LIMITS.find((l) => l > limit);
+
+  function handleFetchMore() {
+    if (!nextLimit) return;
+    setLimit(nextLimit);
+    handleImport(nextLimit);
   }
 
   return (
@@ -92,7 +106,7 @@ export function LichessImportSection({
         />
 
         <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted, marginTop: 12, marginBottom: 6 }}>Games to fetch</Text>
-        <View style={{ flexDirection: "row", gap: 6 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {LIMITS.map((l) => (
             <Pressable key={l} onPress={() => setLimit(l)} style={[st.limitChip, limit === l ? { backgroundColor: LI_COLOR, borderColor: LI_COLOR } : { borderColor: t.border }]}>
               <Text style={{ fontSize: 12, fontWeight: "600", color: limit === l ? "#fff" : t.textMuted }}>{l}</Text>
@@ -101,7 +115,7 @@ export function LichessImportSection({
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 }}>
-          <Pressable onPress={handleImport} disabled={!canSubmit} style={[st.submitBtn, { backgroundColor: LI_COLOR, opacity: !canSubmit ? 0.5 : 1 }]}>
+          <Pressable onPress={() => handleImport(limit)} disabled={!canSubmit} style={[st.submitBtn, { backgroundColor: LI_COLOR, opacity: !canSubmit ? 0.5 : 1 }]}>
             <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
               {status === "loading" ? "Fetching games…" : "Import from Lichess"}
             </Text>
@@ -127,6 +141,16 @@ export function LichessImportSection({
               </View>
             </View>
             <ImportResultPanel result={result as unknown as PGNImportResult} />
+            {nextLimit ? (
+              <Pressable onPress={handleFetchMore} style={[st.fetchMoreBtn, { borderColor: LI_COLOR }]}>
+                <Ionicons name="reload-outline" size={14} color={LI_COLOR} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: LI_COLOR }}>Fetch more — go back {nextLimit} games</Text>
+              </Pressable>
+            ) : (
+              <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 10 }}>
+                {MAX_LIMIT} games is as far back as Lichess imports go.
+              </Text>
+            )}
           </View>
         )}
       </View>
@@ -141,6 +165,7 @@ const st = StyleSheet.create({
   accountChip: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 14 },
   limitChip: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  fetchMoreBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingVertical: 10 },
   submitBtn: { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12 },
   errorBox: { marginTop: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 10 },
   metaPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
