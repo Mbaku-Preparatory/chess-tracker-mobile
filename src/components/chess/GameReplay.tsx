@@ -32,28 +32,42 @@ export interface ParsedMove {
   color: "w" | "b";
 }
 
-export function parsePgnMoves(pgn: string): ParsedMove[] {
+export interface ParsedPgn {
+  moves: ParsedMove[];
+  players: PgnPlayers;
+}
+
+/**
+ * One parse per PGN — the move list and the tag roster both come off the same
+ * load. `move.after` is the position following the move, so there is no need to
+ * replay the game a second time to collect per-ply FENs.
+ */
+export function parsePgn(pgn: string | null): ParsedPgn {
+  if (!pgn) return { moves: [], players: { white: null, black: null } };
+  // Held outside the try: chess.js fills the roster before it walks the moves,
+  // so a game that throws on an illegal move still has real names on it.
   const chess = new Chess();
+  let loaded = true;
   try {
     chess.loadPgn(pgn);
   } catch {
-    return [];
+    loaded = false;
   }
-  const history = chess.history({ verbose: true });
-  const parsed: ParsedMove[] = [];
-  const replay = new Chess();
-  for (const move of history) {
-    replay.move(move.san);
-    parsed.push({
-      san: move.san,
-      fen: replay.fen(),
-      from: move.from,
-      to: move.to,
-      moveNumber: Math.ceil((parsed.length + 1) / 2),
-      color: move.color,
-    });
-  }
-  return parsed;
+  const moves = loaded
+    ? chess.history({ verbose: true }).map((move, i) => ({
+        san: move.san,
+        fen: move.after,
+        from: move.from,
+        to: move.to,
+        moveNumber: Math.ceil((i + 1) / 2),
+        color: move.color,
+      }))
+    : [];
+  return { moves, players: playersFromHeaders(chess.getHeaders()) };
+}
+
+export function parsePgnMoves(pgn: string): ParsedMove[] {
+  return parsePgn(pgn).moves;
 }
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -65,22 +79,18 @@ export interface SidePlayer {
   rating: string | null;
 }
 
+export interface PgnPlayers {
+  white: SidePlayer | null;
+  black: SidePlayer | null;
+}
+
 /**
  * Both players, read from the PGN's tag roster. This is the only source that
- * names *both* sides — a `Game` record only stores the opponent — and it costs
- * nothing here because the PGN is already in hand. Returns null per side when
- * the import carried no usable tag, leaving the caller's fallback to fill in.
+ * names *both* sides — a `Game` record only stores the opponent. Null per side
+ * when the import carried no usable tag, leaving the caller's fallback to fill
+ * in; PGN writers use "?" for an unknown tag, which is worse than no tag.
  */
-function playersFromPgn(pgn: string | null): { white: SidePlayer | null; black: SidePlayer | null } {
-  if (!pgn) return { white: null, black: null };
-  // Outside the try: chess.js fills the tag roster before it walks the moves, so
-  // a game that throws on an illegal move still has real names on it.
-  const chess = new Chess();
-  try {
-    chess.loadPgn(pgn);
-  } catch { /* keep whatever the roster got */ }
-  const headers = chess.getHeaders();
-  // PGN writers use "?" for an unknown tag, which is worse than no tag at all.
+function playersFromHeaders(headers: Record<string, string>): PgnPlayers {
   const read = (prefix: "White" | "Black"): SidePlayer | null => {
     const name = headers[prefix]?.trim();
     if (!name || name === "?") return null;
@@ -147,7 +157,7 @@ export function GameReplay({
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [analysisLoading, setAnalysisLoading] = useState<"lichess" | null>(null);
 
-  const moves = useMemo(() => (pgn ? parsePgnMoves(pgn) : []), [pgn]);
+  const { moves, players: named } = useMemo(() => parsePgn(pgn), [pgn]);
 
   const goTo = useCallback((i: number) => setCurrentIndex(Math.max(-1, Math.min(i, moves.length - 1))), [moves.length]);
 
@@ -198,7 +208,6 @@ export function GameReplay({
 
   // Plates are placed by seat, not by colour: whoever is at the bottom of the
   // board gets the bottom plate, which flips with the orientation.
-  const named = useMemo(() => playersFromPgn(pgn), [pgn]);
   const white = named.white ?? players?.white ?? { name: "White", rating: null };
   const black = named.black ?? players?.black ?? { name: "Black", rating: null };
   const bottom = orientation === "white" ? white : black;
