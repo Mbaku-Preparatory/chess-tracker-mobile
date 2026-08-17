@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   Linking,
   Modal,
   Pressable,
@@ -10,6 +9,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Chess } from "chess.js";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,6 +58,61 @@ export function parsePgnMoves(pgn: string): ParsedMove[] {
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+// ── Board name plates ─────────────────────────────────────────────────────────
+
+export interface SidePlayer {
+  name: string;
+  rating: string | null;
+}
+
+/**
+ * Both players, read from the PGN's tag roster. This is the only source that
+ * names *both* sides — a `Game` record only stores the opponent — and it costs
+ * nothing here because the PGN is already in hand. Returns null per side when
+ * the import carried no usable tag, leaving the caller's fallback to fill in.
+ */
+function playersFromPgn(pgn: string | null): { white: SidePlayer | null; black: SidePlayer | null } {
+  if (!pgn) return { white: null, black: null };
+  // Outside the try: chess.js fills the tag roster before it walks the moves, so
+  // a game that throws on an illegal move still has real names on it.
+  const chess = new Chess();
+  try {
+    chess.loadPgn(pgn);
+  } catch { /* keep whatever the roster got */ }
+  const headers = chess.getHeaders();
+  // PGN writers use "?" for an unknown tag, which is worse than no tag at all.
+  const read = (prefix: "White" | "Black"): SidePlayer | null => {
+    const name = headers[prefix]?.trim();
+    if (!name || name === "?") return null;
+    const elo = headers[`${prefix}Elo`]?.trim();
+    return { name, rating: elo && elo !== "?" ? elo : null };
+  };
+  return { white: read("White"), black: read("Black") };
+}
+
+/** One name plate, width-matched to the board so long names truncate. */
+function PlayerPlate({ player, color, width }: { player: SidePlayer; color: "white" | "black"; width: number }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, width }}>
+      <View
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: 5,
+          borderWidth: StyleSheet.hairlineWidth,
+          backgroundColor: color === "white" ? "#ffffff" : "#1f2937",
+          borderColor: color === "white" ? "#d1d5db" : "#4b5563",
+        }}
+      />
+      <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "700", color: t.text }}>
+        {player.name}
+      </Text>
+      {player.rating ? <Text style={{ fontSize: 11, color: t.textMuted }}>{player.rating}</Text> : null}
+    </View>
+  );
+}
+
 function NavBtn({ icon, disabled, onPress, color }: { icon: keyof typeof Ionicons.glyphMap; disabled: boolean; onPress: () => void; color: string }) {
   const t = useTheme();
   return (
@@ -75,6 +130,7 @@ export function GameReplay({
   header,
   onClose,
   filename,
+  players,
 }: {
   pgn: string | null;
   loading?: boolean;
@@ -83,6 +139,8 @@ export function GameReplay({
   header: React.ReactNode;
   onClose: () => void;
   filename: string;
+  /** Used only for sides the PGN itself does not name. */
+  players?: { white?: SidePlayer; black?: SidePlayer };
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
@@ -133,7 +191,18 @@ export function GameReplay({
     Share.share({ message: pgn, title: filename });
   }
 
-  const boardSize = Math.min(Dimensions.get("window").width - 100, 320);
+  // Read reactively so the board resizes on rotation and on foldables, rather
+  // than freezing at whatever the width happened to be on first render.
+  const { width: windowWidth } = useWindowDimensions();
+  const boardSize = Math.min(windowWidth - 100, 320);
+
+  // Plates are placed by seat, not by colour: whoever is at the bottom of the
+  // board gets the bottom plate, which flips with the orientation.
+  const named = useMemo(() => playersFromPgn(pgn), [pgn]);
+  const white = named.white ?? players?.white ?? { name: "White", rating: null };
+  const black = named.black ?? players?.black ?? { name: "Black", rating: null };
+  const bottom = orientation === "white" ? white : black;
+  const top = orientation === "white" ? black : white;
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
@@ -148,13 +217,17 @@ export function GameReplay({
         <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
           <View style={[st.boardArea, { backgroundColor: t.elevated }]}>
             <EvalBar score={engine.score} mate={engine.mate} depth={engine.depth} isAnalyzing={engine.isAnalyzing} source={engine.source} height={boardSize} />
-            {loading ? (
-              <View style={{ width: boardSize, height: boardSize, alignItems: "center", justifyContent: "center" }}>
-                <ActivityIndicator color={t.brand(600)} />
-              </View>
-            ) : (
-              <ChessBoard fen={currentFen} orientation={orientation} size={boardSize} highlights={highlights} />
-            )}
+            <View style={{ gap: 6 }}>
+              <PlayerPlate player={top} color={orientation === "white" ? "black" : "white"} width={boardSize} />
+              {loading ? (
+                <View style={{ width: boardSize, height: boardSize, alignItems: "center", justifyContent: "center" }}>
+                  <ActivityIndicator color={t.brand(600)} />
+                </View>
+              ) : (
+                <ChessBoard fen={currentFen} orientation={orientation} size={boardSize} highlights={highlights} />
+              )}
+              <PlayerPlate player={bottom} color={orientation} width={boardSize} />
+            </View>
           </View>
 
           <View style={st.moveListWrap}>

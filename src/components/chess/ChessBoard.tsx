@@ -231,7 +231,9 @@ export function ChessBoard({
             {displayCells.map((piece, cIdx) => {
               const file = orientation === "white" ? cIdx : 7 - cIdx;
               const square = `${FILES[file]}${rank}`;
-              const isDark = (file + rank) % 2 === 0;
+              // `file` is 0-indexed (a=0) but `rank` is 1-indexed, so a dark
+              // square is odd parity, not even: a1 = 0+1 = dark, h1 = 7+1 = light.
+              const isDark = (file + rank) % 2 === 1;
               const highlight = highlightMap.get(square);
               return (
                 <View

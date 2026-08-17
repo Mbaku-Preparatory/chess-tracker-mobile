@@ -1,7 +1,7 @@
 {
-  "name": "chess-tracker-mobile-app",
+  "name": "chess-tracker-mobile",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.5",
   "packageManager": "pnpm@10.13.1",
   "main": "index.ts",
   "scripts": {

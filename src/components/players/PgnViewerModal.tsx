@@ -43,12 +43,21 @@ export function PgnViewerModal({ game, onClose }: { game: Game; onClose: () => v
     ? new Date(game.date_played).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
     : null;
 
+  // Only reached when the PGN carries no name tag for that side; the scouted
+  // player's own name is not on the game record, so their plate falls back to
+  // the colour word rather than inventing one.
+  const opponent = {
+    name: game.opponent_name,
+    rating: game.opponent_rating ? String(game.opponent_rating) : null,
+  };
+
   return (
     <GameReplay
       pgn={pgn}
       loading={loading}
       error={error}
       orientation={game.color_played === "black" ? "black" : "white"}
+      players={game.color_played === "black" ? { white: opponent } : { black: opponent }}
       onClose={onClose}
       filename={pgnFilename(game)}
       header={
