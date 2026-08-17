@@ -1,5 +1,30 @@
 # Releasing to the Play Store
 
+> Supersedes `RELEASING.md`, which this file replaces wholesale. Last worked on
+> **2026-08-18**.
+
+## Where things stand
+
+| | |
+|---|---|
+| Identity verification | **Cleared 2026-08-17.** No longer blocking. |
+| Version | `1.0.5` / `versionCode 7` — never published |
+| Privacy policy | Live, 200 signed out, covers all four processors |
+| Device test | Founder testing in progress |
+| Closed testing | **Not started — see the warning below** |
+
+### ⚠️ Read this before planning a launch date
+
+For a **personal** developer account, Play requires a closed test with
+**12 testers opted in continuously for 14 days** before you can even apply for
+production access. That is a calendar dependency, not a task. The fourteen days
+start once all twelve are in, and a tester who opts out resets their own
+contribution — so recruit the twelve *before* uploading.
+
+Verify the current threshold in the Console; Google has changed these numbers
+before. If it still applies, the earliest possible production date is roughly
+two weeks after the closed track fills, regardless of how ready the binary is.
+
 ## Identity — do not change these casually
 
 | | |
@@ -27,6 +52,72 @@ changing it means publishing a brand-new app with zero installs and reviews.
 > things at once: the policy page, the Data safety answers below, and the
 > in-app disclosure. Change all three or none.
 
+## App access — test credentials for reviewers
+
+The app is entirely behind a login, so Play Console's **App access** section
+must carry working credentials. Leaving it blank gets the review rejected.
+
+**The account must be pre-verified.** In this codebase `is_active` means "has
+verified their email" (`users/models.py:22`), and `LoginView` returns 403
+*"Please verify your email before logging in"* otherwise (`users/views.py:116`).
+A Google reviewer cannot receive your verification email.
+
+**Recommended route — sign up through the app itself:**
+
+1. Register in the app with a throwaway address you control (not your personal
+   account — reviewers can see these credentials).
+2. Verify by email normally. Brevo is configured and mail does arrive.
+3. Open Magnus Carlsen and Hikaru Nakamura, which are seeded automatically
+   (see below), and tap Import once on each so the pages have real games.
+4. Paste that username and password into App access.
+
+This gives real credentials, populated content, and a free end-to-end test of
+the signup flow on the build you are about to ship.
+
+**Fallback — create it directly**, if signup is unavailable:
+
+```bash
+railway run python manage.py shell -c "
+from django.contrib.auth import get_user_model
+from players.services.sample_players import create_sample_players
+U = get_user_model()
+u, created = U.objects.get_or_create(
+    username='playreview',
+    defaults={'email': 'playreview@example.com', 'is_active': True},
+)
+u.is_active = True
+u.set_password('<pick-a-strong-password>')
+u.save()
+create_sample_players(u)   # create_user bypasses registration, so seed by hand
+print('created' if created else 'updated', u.username, u.is_active)
+"
+```
+
+No `AccountStatus` row is needed — `user_is_disabled` handles its absence,
+which is the normal case.
+
+### Sample players on new accounts
+
+`players/services/sample_players.py` (backend) seeds **Magnus Carlsen** and
+**Hikaru Nakamura** onto every account at registration, so nobody — reviewer or
+real user — opens on an empty list.
+
+| | Magnus | Hikaru |
+|---|---|---|
+| chess.com | `magnuscarlsen` | `hikaru` |
+| Lichess | `DrNykterstein` | *(blank on purpose)* |
+| FIDE | `1503014` | `2016192` |
+
+All verified against the live sources on 2026-08-18. Hikaru's Lichess field is
+**deliberately empty**: the account named `Hikaru` there carries no title and is
+not him, and seeding it would import a stranger's games onto his page for every
+new user.
+
+The rows carry handles but **no games** — importing is one tap on the player
+page, not something that happens at signup. That is deliberate: registration
+happens once, cannot be retried without support, and may not depend on a third
+party being up.
+
 ## Payments are web-only, on purpose
 
 `TipSection` is gated behind `Platform.OS === "web"` in `AccountScreen`, so the
@@ -48,17 +139,33 @@ currently states in as many words that the Android app does not include this.
 ## Build
 
 ```bash
-eas login                                        # interactive, one time
-eas build -p android --profile production        # produces the .aab
+pnpm eas:login     # interactive, one time — cannot be automated
+pnpm build:aab     # eas build -p android --profile production → the .aab
 ```
 
 The production profile builds an **app bundle** (`.aab`), which is what Play
-requires — the `.apk` profile (`preview`) is for sideloading to a test device only.
+requires. `pnpm build:apk` (the `preview` profile) is for sideloading to a test
+device only; `pnpm build:dev` is the dev client.
 
 On the first build EAS will offer to generate an upload keystore. Accept, and let
 EAS hold it. If you ever take the keystore local instead, back it up somewhere
 you cannot lose it: losing the upload key means you can no longer ship updates to
 the listing.
+
+### Two known warnings, both harmless
+
+**"Detected that your app uses Expo Go for development."** Fires only because
+`expo-dev-client` is not a dependency; that is the sole signal EAS checks. It
+does not affect the AAB — the production profile compiles the real native app,
+and Expo Go is never in that path. This project cannot run in Expo Go anyway
+(local native module `ringtone-picker`, config plugins, an `android/` dir).
+The honest fix, when convenient, is `npx expo install expo-dev-client` — not
+`EAS_BUILD_NO_EXPO_GO_WARNING=true`, which hides the signal without changing
+anything.
+
+**Sentry source maps are not uploaded** (`SENTRY_DISABLE_AUTO_UPLOAD` in all
+three `eas.json` profiles). Crashes still report, but stack traces are
+minified. That was a deliberate fix to unbreak the EAS build (`ad5885e`).
 
 ### Why the API URL lives in `eas.json`, not `.env`
 
@@ -76,19 +183,22 @@ and neither is incremented automatically. **Every** upload to Play needs a
 `versionCode` strictly higher than the last one, or the Console rejects it:
 
 ```jsonc
-"version": "1.0.1",     // versionName — what users see
-"android": { "versionCode": 2 }   // must increase on every single upload
+"version": "1.0.5",               // versionName — what users see
+"android": { "versionCode": 7 }   // must increase on every single upload
 ```
 
 Then update **`MOBILE_LATEST_VERSION` in Railway's variables** to match, so the
 in-app "update available" banner is accurate. Do not edit the default in
-`config/settings/base.py` - those defaults are deliberately inert fallbacks, and
+`config/settings/base.py` — those defaults are deliberately inert fallbacks, and
 the whole point of the gate being env-driven is that changing it never needs a
 backend deploy.
 
+There is **no EAS Update configured**, so every JS change needs a new build and
+a new store release. Batch changes and bump `versionCode` once at the end.
+
 ## Forcing an update (emergency)
 
-Set on Railway - no code change, no rebuild:
+Set on Railway — no code change, no rebuild:
 
 | Variable | Effect |
 |---|---|
@@ -98,7 +208,7 @@ Set on Railway - no code change, no rebuild:
 
 The gate fails open at every layer: unset variables leave it inert, an unparseable
 client version is let through, and the app treats any network error as "carry on".
-That is deliberate - a gate that fails closed turns a config typo into an app
+That is deliberate — a gate that fails closed turns a config typo into an app
 nobody can open.
 
 ## Permissions
@@ -124,6 +234,9 @@ Expected: `INTERNET`, `POST_NOTIFICATIONS`, `READ_MEDIA_IMAGES`, `VIBRATE`, plus
 `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`, `ACCESS_NETWORK_STATE`, `READ_APP_BADGE`,
 `USE_BIOMETRIC`/`USE_FINGERPRINT` from expo-notifications and expo-secure-store.
 
+Be ready to justify `READ_MEDIA_IMAGES` if asked. If nothing still uses image
+picking, dropping it is cleaner than defending it.
+
 `android/` is gitignored and regenerated by prebuild — never hand-edit it. All
 native config belongs in `app.json`.
 
@@ -137,6 +250,7 @@ before both and answered "no" where the answer is now "yes".
 |---|---|
 | Collects data? | Yes |
 | Name, email address | Collected, required, for account management. **Also sent to Sentry** — `identifyUser()` attaches the signed-in email to crash reports |
+| **FIDE ID** | **Collected** — optional at signup, stored on the user's own player row. New since the last answers were written; do not reuse an old form |
 | Photos | **Not collected** — profile picture is written to device local storage only, never uploaded |
 | Location, contacts, calendar, financial info | Not collected |
 | App activity — other user-generated content | **Collected** — questions asked of Mbaku and the answers, stored against the account and sent to Anthropic |
@@ -144,6 +258,10 @@ before both and answered "no" where the answer is now "yes".
 | Advertising / tracking | None. No ad SDK, no ad ID, `tracesSampleRate: 0` |
 | Data encrypted in transit? | Yes (HTTPS) |
 | Users can request deletion? | Yes — in-app, Account → Danger zone, plus by email per the policy |
+
+**Financial info must stay "not collected"** — that is true *only* because tips
+are gated out of the native build. If that gate ever comes off, this answer and
+the privacy policy both become wrong.
 
 **The one row worth reading the Console's own wording on: "shared".** Google
 distinguishes *shared* (transferred to another company for their own use) from
@@ -166,14 +284,15 @@ instruction; no user data is sent to them.
 
 ## Still needs a human
 
-- Play Console developer account ($25 one-time) and identity verification, which
-  can itself take days — start it first if it isn't done.
-- Store listing: short + full description, feature graphic (1024×500), at least
-  two phone screenshots, app category, content rating questionnaire.
-- Closed testing track: for a **personal** developer account, Play requires a
-  closed test with **12 testers opted in continuously for 14 days** before you
-  can apply for production access. Plan around it — it is a calendar
-  dependency, not a task. Recruit the twelve *before* uploading, because the
-  fourteen days start when they are all in, and a tester who opts out resets
-  their own contribution. Verify the current threshold in the Console; Google
-  has changed these numbers before.
+- [x] Play Console developer account and identity verification — **cleared 2026-08-17**
+- [ ] **Closed testing track: 12 testers × 14 continuous days.** Start recruiting now; see the warning at the top
+- [ ] Point the Console's privacy policy field at `mbaku-preparatory.vercel.app/privacy`
+- [ ] Data safety form — fresh pass, not a reuse. FIDE ID is new
+- [ ] Store listing: short (80 char) + full (4000 char) description, feature
+      graphic (1024×500), 512×512 icon, at least two phone screenshots, app
+      category, content rating questionnaire, target audience, ads declaration (none)
+- [ ] Device test on hardware — nothing had run on a phone since the
+      `useNavigationState` crash
+- [ ] `pnpm eas:login`, then `pnpm build:aab`
+- [ ] Deploy the backend if sample-player seeding is to be live at signup
+      (it is a backend change; pushing `develop` deploys to Railway production)
