@@ -26,6 +26,9 @@ type Step =
   | { type: "searching" }
   | { type: "selecting-player"; candidates: ChessResultsPlayerCandidate[] }
   | { type: "loading-tournaments"; name: string }
+  // Picking a player with a FIDE ID starts the import there and then, so there
+  // is a moment between the tap and the job existing.
+  | { type: "starting"; name: string }
   | { type: "choose-mode"; playerName: string; tournaments: ChessResultsTournamentOption[] }
   | { type: "selecting-tournaments"; playerName: string; tournaments: ChessResultsTournamentOption[] }
   // The import is a row in the database being worked on by the worker service,
@@ -141,13 +144,41 @@ export function ChessResultsImportSection({
         setStep({ type: "idle" });
         setSearchError("No players found. Try a different name or check the FIDE ID.");
       } else if (results.length === 1) {
-        await loadTournaments(results[0].cr_id, results[0].name);
+        // Only one person it could be — don't make them confirm it.
+        await selectCandidate(results[0]);
       } else {
         setStep({ type: "selecting-player", candidates: results });
       }
     } catch (err) {
       setStep({ type: "idle" });
       setSearchError(userMessage(err, "Search failed. Try again."));
+    }
+  }
+
+  // The fork in the flow. A player with a FIDE ID can be imported whole in one
+  // request, which is fast enough that asking "all of them, or which ones?"
+  // would be asking someone to optimise something that no longer costs
+  // anything. Without an ID there is nothing to look them up by in the game
+  // database, so those players still go through the tournament list — and
+  // matching a scout target on surname alone would risk importing a namesake's
+  // games, which is worse than being slow.
+  async function selectCandidate(candidate: ChessResultsPlayerCandidate) {
+    if (candidate.fide_id) {
+      await importCareer(candidate.fide_id, candidate.name);
+    } else {
+      await loadTournaments(candidate.cr_id, candidate.name);
+    }
+  }
+
+  async function importCareer(fideId: string, name: string) {
+    setStep({ type: "starting", name });
+    setJobError(null);
+    try {
+      const job = await api.createCareerImportJob(slug, fideId, notifyEmail);
+      setStep({ type: "job", job });
+    } catch (err) {
+      setStep({ type: "idle" });
+      setSearchError(userMessage(err, "Could not start the import."));
     }
   }
 
@@ -337,7 +368,7 @@ export function ChessResultsImportSection({
           {step.candidates.map((c) => (
             <Pressable
               key={c.cr_id}
-              onPress={() => loadTournaments(c.cr_id, c.name)}
+              onPress={() => selectCandidate(c)}
               style={[st.candidateRow, { borderColor: t.border, backgroundColor: t.surface }]}
             >
               <View style={{ flex: 1 }}>
@@ -361,10 +392,14 @@ export function ChessResultsImportSection({
         </View>
       )}
 
-      {step.type === "loading-tournaments" && (
+      {(step.type === "loading-tournaments" || step.type === "starting") && (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10 }}>
           <ActivityIndicator size="small" color={CR_COLOR} />
-          <Text style={{ fontSize: 12, color: t.textMuted }}>Loading tournaments for {step.name}…</Text>
+          <Text style={{ fontSize: 12, color: t.textMuted }}>
+            {step.type === "starting"
+              ? `Fetching games for ${step.name}…`
+              : `Loading tournaments for ${step.name}…`}
+          </Text>
         </View>
       )}
 

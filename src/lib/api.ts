@@ -301,6 +301,22 @@ export const api = {
     });
   },
 
+  // Everything chess-results holds on one player, without listing the events
+  // first. The worker asks their game database, which is one request for a
+  // whole career instead of one per tournament, so this is the preferred way
+  // in whenever a FIDE ID is known.
+  createCareerImportJob(
+    slug: string,
+    fideId: string,
+    notifyEmail = false
+  ): Promise<ImportJob> {
+    return fetchJson(`${API_BASE}/players/${slug}/import-jobs/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fide_id: fideId, notify_email: notifyEmail }),
+    });
+  },
+
   getImportJob(jobId: string): Promise<ImportJob> {
     return fetchJson(`${API_BASE}/import-jobs/${jobId}/`);
   },
