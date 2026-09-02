@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -6,9 +6,9 @@ import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeContext";
 import { Button } from "@/components/ui/Button";
 import { ConnectedAccountManager } from "./ConnectedAccountManager";
-import { ImportResultPanel } from "./ImportResultPanel";
-import type { ChessComImportResult, PGNImportResult, PlayerAccount } from "@/types";
-import { userMessage } from "@/lib/apiError";
+import { ImportJobProgress } from "./ImportJobProgress";
+import { useImportJob } from "./useImportJob";
+import type { PlayerAccount } from "@/types";
 
 // 300 is the server's ceiling (ChessComImportSerializer.limit), so "fetch more"
 // runs out here. Re-importing is safe: ingest_pgn upserts, so a wider fetch
@@ -16,8 +16,6 @@ import { userMessage } from "@/lib/apiError";
 const LIMITS = [25, 50, 100, 200, 300];
 const MAX_LIMIT = LIMITS[LIMITS.length - 1];
 const CC_COLOR = "#7fa650";
-
-type Status = "idle" | "loading" | "success" | "error";
 
 export function ChessComImportSection({
   slug,
@@ -32,32 +30,25 @@ export function ChessComImportSection({
   const chesscomAccounts = accounts.filter((a) => a.platform === "chesscom");
   const [username, setUsername] = useState(chesscomAccounts[0]?.username || "");
   const [limit, setLimit] = useState(50);
-  const [status, setStatus] = useState<Status>("idle");
-  const [result, setResult] = useState<ChessComImportResult | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  // The import runs in the worker service now, so this holds a job id and
+  // polls. `matches` keeps this panel showing Chess.com work only — a player
+  // can have a chess-results import running at the same time.
+  const { job, starting, error: errorMsg, start, cancel, reset, isRunning } = useImportJob({
+    slug,
+    matches: (j) => j.results?.[0]?.name?.startsWith("Chess.com") ?? false,
+    onSettled: async () => { await onUpdated?.(); },
+  });
 
-  const canSubmit = username.trim().length > 0 && status !== "loading";
+  const canSubmit = username.trim().length > 0 && !starting && !isRunning;
 
   // Takes the count as an argument rather than reading `limit`: "fetch more"
   // raises it and re-runs in one go, and the state setter has not landed yet.
   async function handleImport(fetchLimit: number) {
     if (!canSubmit) return;
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setStatus("loading");
-    setResult(null);
-    setErrorMsg(null);
-    try {
-      const data = await api.importFromChessCom(slug, { username: username.trim(), limit: fetchLimit }, controller.signal);
-      setResult(data);
-      setStatus("success");
-      await onUpdated?.();
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      setErrorMsg(userMessage(err, "Import failed. Check the username and try again."));
-      setStatus("error");
-    }
+    await start(
+      () => api.importFromChessCom(slug, { username: username.trim(), limit: fetchLimit }),
+      "Import failed. Check the username and try again.",
+    );
   }
 
   const nextLimit = LIMITS.find((l) => l > limit);
@@ -86,7 +77,7 @@ export function ChessComImportSection({
             {chesscomAccounts.map((a) => (
               <Pressable
                 key={a.id}
-                onPress={() => { setUsername(a.username); setResult(null); setStatus("idle"); }}
+                onPress={() => { setUsername(a.username); reset(); }}
                 style={[st.accountChip, username === a.username ? { backgroundColor: CC_COLOR, borderColor: CC_COLOR } : { borderColor: t.border }]}
               >
                 <Text style={{ fontSize: 11, fontWeight: "600", color: username === a.username ? "#fff" : t.textMuted }}>{a.username}</Text>
@@ -98,7 +89,7 @@ export function ChessComImportSection({
         <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted, marginBottom: 6 }}>Chess.com username</Text>
         <TextInput
           value={username}
-          onChangeText={(v) => { setUsername(v); setResult(null); setErrorMsg(null); setStatus("idle"); }}
+          onChangeText={(v) => { setUsername(v); reset(); }}
           placeholder="e.g. hikaru"
           placeholderTextColor={t.textFaint}
           autoCapitalize="none"
@@ -118,52 +109,35 @@ export function ChessComImportSection({
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 }}>
           <Pressable onPress={() => handleImport(limit)} disabled={!canSubmit} style={[st.submitBtn, { backgroundColor: CC_COLOR, opacity: !canSubmit ? 0.5 : 1 }]}>
             <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
-              {status === "loading" ? "Fetching games…" : "Import from Chess.com"}
+              {starting ? "Queueing…" : isRunning ? "Import running…" : "Import from Chess.com"}
             </Text>
           </Pressable>
-          {status === "loading" && (
-            <Pressable onPress={() => { abortRef.current?.abort(); setStatus("idle"); }}>
-              <Text style={{ fontSize: 12, color: t.textMuted }}>Cancel</Text>
-            </Pressable>
-          )}
         </View>
 
-        {status === "loading" && (
-          // The request is synchronous and held by this component: leaving the
-          // screen or backgrounding the app aborts it, and nothing resumes it.
-          <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 10 }}>
-            Keep the app open — fetching {limit} games can take a minute.
-          </Text>
-        )}
-
-        {status === "error" && errorMsg && (
+        {errorMsg && (
           <View style={[st.errorBox, { backgroundColor: t.dangerBg, borderColor: t.dangerBorder }]}>
             <Text style={{ color: t.danger, fontSize: 12 }}>{errorMsg}</Text>
           </View>
         )}
 
-        {status === "success" && result && (
-          <View style={{ marginTop: 14 }}>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              <View style={[st.metaPill, { backgroundColor: t.elevated }]}>
-                <Text style={{ fontSize: 11, color: t.textMuted }}>{result.fetch_meta.games_fetched} fetched</Text>
-              </View>
-              <View style={[st.metaPill, { backgroundColor: t.elevated }]}>
-                <Text style={{ fontSize: 11, color: t.textMuted }}>{result.fetch_meta.archives_visited} months scanned</Text>
-              </View>
-            </View>
-            <ImportResultPanel result={result as unknown as PGNImportResult} />
-            {nextLimit ? (
-              <Pressable onPress={handleFetchMore} style={[st.fetchMoreBtn, { borderColor: CC_COLOR }]}>
-                <Ionicons name="reload-outline" size={14} color={CC_COLOR} />
-                <Text style={{ fontSize: 12, fontWeight: "700", color: CC_COLOR }}>Fetch more — go back {nextLimit} games</Text>
-              </Pressable>
-            ) : (
-              <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 10 }}>
-                {MAX_LIMIT} games is as far back as Chess.com imports go.
-              </Text>
-            )}
-          </View>
+        <ImportJobProgress
+          job={job}
+          onCancel={cancel}
+          accent={CC_COLOR}
+          runningLabel="Fetching archives from Chess.com…"
+        />
+
+        {job?.status === "succeeded" && (
+          nextLimit ? (
+            <Pressable onPress={handleFetchMore} style={[st.fetchMoreBtn, { borderColor: CC_COLOR }]}>
+              <Ionicons name="reload-outline" size={14} color={CC_COLOR} />
+              <Text style={{ fontSize: 12, fontWeight: "700", color: CC_COLOR }}>Fetch more — go back {nextLimit} games</Text>
+            </Pressable>
+          ) : (
+            <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 10 }}>
+              {MAX_LIMIT} games is as far back as Chess.com imports go.
+            </Text>
+          )
         )}
       </View>
       <ConnectedAccountManager slug={slug} platform="chesscom" accounts={accounts} onUpdated={onUpdated} />

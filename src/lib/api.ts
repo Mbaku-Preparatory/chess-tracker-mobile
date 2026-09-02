@@ -218,11 +218,16 @@ export const api = {
     });
   },
 
+  /**
+   * Queue a Chess.com import. Returns the job to poll, not a result — the
+   * fetching happens in the worker service, so backgrounding the app or
+   * leaving the screen no longer kills the import.
+   */
   importFromChessCom(
     slug: string,
-    payload: { username?: string; limit?: number },
+    payload: { username?: string; limit?: number; notify_email?: boolean },
     signal?: AbortSignal,
-  ): Promise<ChessComImportResult> {
+  ): Promise<ImportJob> {
     return fetchJson(`${API_BASE}/players/${slug}/import-chesscom/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -231,11 +236,12 @@ export const api = {
     });
   },
 
+  /** Queue a Lichess import. Returns the job to poll — see importFromChessCom. */
   importFromLichess(
     slug: string,
-    payload: { username?: string; limit?: number },
+    payload: { username?: string; limit?: number; notify_email?: boolean },
     signal?: AbortSignal,
-  ): Promise<LichessImportResult> {
+  ): Promise<ImportJob> {
     return fetchJson(`${API_BASE}/players/${slug}/import-lichess/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -333,10 +339,11 @@ export const api = {
     return fetchJson(`${API_BASE}/players/${slug}/import-jobs/recent/`);
   },
 
+  /** Queue a single chess-results event. Returns the job to poll. */
   importFromChessResults(
     slug: string,
-    payload: { url: string }
-  ): Promise<ChessResultsImportResult> {
+    payload: { url: string; notify_email?: boolean }
+  ): Promise<ImportJob> {
     return fetchJson(`${API_BASE}/players/${slug}/import-chess-results/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
