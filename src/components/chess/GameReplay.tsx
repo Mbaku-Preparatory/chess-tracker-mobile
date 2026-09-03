@@ -155,7 +155,7 @@ function PlayerPlate({ player, color, width, score }: { player: SidePlayer; colo
         {player.name}
       </Text>
       {score ? (
-        <Text style={{ fontSize: 13, fontWeight: "800", color: t.text }}>{score}</Text>
+        <Text style={{ fontSize: 13, fontWeight: "800", color: t.text }}>({score})</Text>
       ) : null}
       {player.rating ? (
         <Text style={{ marginLeft: "auto", fontSize: 11, color: t.textMuted }}>{player.rating}</Text>
