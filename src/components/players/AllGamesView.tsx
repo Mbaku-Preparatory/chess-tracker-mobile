@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { api } from "@/lib/api";
+import { gameRef } from "@/lib/gameRef";
 import { useTheme } from "@/theme/ThemeContext";
 import { GamesTable } from "./GamesTable";
 import { Button } from "@/components/ui/Button";
@@ -71,7 +72,7 @@ export function AllGamesView({ slug }: { slug: string }) {
   const [search, setSearch] = useState("");
 
   function handleGameDeleted(gameId: string) {
-    setGames((prev) => prev.filter((g) => g.public_id !== gameId));
+    setGames((prev) => prev.filter((g) => gameRef(g) !== gameId));
     setTotal((prev) => prev - 1);
   }
 

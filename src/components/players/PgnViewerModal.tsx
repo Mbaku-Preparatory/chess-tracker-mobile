@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
 import { api } from "@/lib/api";
+import { gameRef } from "@/lib/gameRef";
 import { useTheme } from "@/theme/ThemeContext";
 import { ColorBadge, ResultBadge } from "@/components/ui/Badge";
 import { GameReplay } from "@/components/chess/GameReplay";
@@ -24,7 +25,7 @@ export function PgnViewerModal({ game, onClose }: { game: Game; onClose: () => v
     setLoading(true);
     setError(null);
     api
-      .getGamePgn(game.public_id)
+      .getGamePgn(gameRef(game))
       .then((data) => {
         if (!cancelled) setPgn(data.pgn_text);
       })

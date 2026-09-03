@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { api } from "@/lib/api";
+import { gameRef } from "@/lib/gameRef";
 import { useTheme } from "@/theme/ThemeContext";
 import { ColorBadge, EcoBadge, ResultBadge, SourceBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -31,10 +32,10 @@ export function GamesTable({
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          setDeletingId(game.public_id);
+          setDeletingId(gameRef(game));
           try {
-            await api.deleteGame(game.public_id);
-            onDeleted?.(game.public_id);
+            await api.deleteGame(gameRef(game));
+            onDeleted?.(gameRef(game));
           } catch {
             // silently reset — user can retry
           } finally {
@@ -80,7 +81,7 @@ export function GamesTable({
                   </View>
                 </View>
                 {onDeleted && (
-                  <Pressable onPress={() => handleDelete(game)} disabled={deletingId === game.public_id} style={{ padding: 6 }}>
+                  <Pressable onPress={() => handleDelete(game)} disabled={deletingId === gameRef(game)} style={{ padding: 6 }}>
                     <Ionicons name="trash-outline" size={16} color={t.textFaint} />
                   </Pressable>
                 )}
