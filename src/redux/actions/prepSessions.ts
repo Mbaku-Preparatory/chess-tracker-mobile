@@ -14,7 +14,7 @@ export const fetchPrepSessions = () => ({
 });
 
 export const updatePrepSession = (
-  id: number,
+  publicId: string,
   changes: Partial<
     Pick<
       PrepSession,
@@ -30,13 +30,13 @@ export const updatePrepSession = (
   >
 ) => ({
   type: UPDATE_PREP_SESSION,
-  payload: { id, changes },
+  payload: { publicId, changes },
   errors: null,
 });
 
-export const deletePrepSession = (id: number) => ({
+export const deletePrepSession = (publicId: string) => ({
   type: DELETE_PREP_SESSION,
-  payload: { id },
+  payload: { publicId },
   errors: null,
 });
 

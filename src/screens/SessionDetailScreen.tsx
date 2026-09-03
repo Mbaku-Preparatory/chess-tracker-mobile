@@ -35,7 +35,7 @@ export function SessionDetailScreen({ route, navigation }: Props) {
         text: "Delete",
         style: "destructive",
         onPress: () => {
-          dispatch(deletePrepSession(session.id));
+          dispatch(deletePrepSession(session.public_id));
           navigation.goBack();
         },
       },
@@ -63,7 +63,7 @@ export function SessionDetailScreen({ route, navigation }: Props) {
           reminderSoundName: session.reminder_sound_name,
         }}
         onSubmit={async (payload) => {
-          const updated = await api.updatePrepSession(session.id, payload);
+          const updated = await api.updatePrepSession(session.public_id, payload);
           dispatch(replacePrepSession(updated));
           navigation.goBack();
         }}

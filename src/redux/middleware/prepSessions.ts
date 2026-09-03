@@ -22,8 +22,8 @@ const fetchPrepSessionsFromApi = async (action: any) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const updatePrepSessionViaApi = async (action: any) => {
   try {
-    const { id, changes } = action.payload;
-    action.payload = { item: await api.updatePrepSession(id, changes) };
+    const { publicId, changes } = action.payload;
+    action.payload = { item: await api.updatePrepSession(publicId, changes) };
   } catch (err) {
     action.errors = userMessage(err, "Failed to update prep session");
   }
@@ -33,9 +33,9 @@ const updatePrepSessionViaApi = async (action: any) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const deletePrepSessionViaApi = async (action: any) => {
   try {
-    const { id } = action.payload;
-    await api.deletePrepSession(id);
-    action.payload = { id };
+    const { publicId } = action.payload;
+    await api.deletePrepSession(publicId);
+    action.payload = { publicId };
   } catch (err) {
     action.errors = userMessage(err, "Failed to delete prep session");
   }

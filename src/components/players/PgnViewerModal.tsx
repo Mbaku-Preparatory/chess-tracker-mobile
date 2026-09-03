@@ -24,7 +24,7 @@ export function PgnViewerModal({ game, onClose }: { game: Game; onClose: () => v
     setLoading(true);
     setError(null);
     api
-      .getGamePgn(game.id)
+      .getGamePgn(game.public_id)
       .then((data) => {
         if (!cancelled) setPgn(data.pgn_text);
       })

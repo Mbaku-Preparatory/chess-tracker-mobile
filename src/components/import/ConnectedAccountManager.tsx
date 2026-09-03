@@ -53,7 +53,7 @@ export function ConnectedAccountManager({
           style: "destructive",
           onPress: () =>
             runAction(`delink-${account.id}-${deleteGames ? "purge" : "keep"}`, async () => {
-              const result = await api.removeAccount(slug, account.id, { deleteGames });
+              const result = await api.removeAccount(slug, account.public_id, { deleteGames });
               setMessage(
                 deleteGames
                   ? `Delinked ${result.username} and deleted ${result.deleted_games} imported game(s).`
@@ -76,7 +76,7 @@ export function ConnectedAccountManager({
           style: "destructive",
           onPress: () =>
             runAction(`games-${account.id}`, async () => {
-              const result = await api.deleteImportedGamesForAccount(slug, account.id);
+              const result = await api.deleteImportedGamesForAccount(slug, account.public_id);
               setMessage(`Deleted ${result.deleted_games} imported game(s) for ${result.username}.`);
             }),
         },

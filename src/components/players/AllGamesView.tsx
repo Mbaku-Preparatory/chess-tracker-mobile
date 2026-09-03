@@ -70,8 +70,8 @@ export function AllGamesView({ slug }: { slug: string }) {
   const [ratingFilter, setRatingFilter] = useState("");
   const [search, setSearch] = useState("");
 
-  function handleGameDeleted(gameId: number) {
-    setGames((prev) => prev.filter((g) => g.id !== gameId));
+  function handleGameDeleted(gameId: string) {
+    setGames((prev) => prev.filter((g) => g.public_id !== gameId));
     setTotal((prev) => prev - 1);
   }
 

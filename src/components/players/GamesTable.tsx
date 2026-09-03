@@ -17,11 +17,12 @@ export function GamesTable({
 }: {
   games: Game[];
   loading?: boolean;
-  onDeleted?: (gameId: number) => void;
+  onDeleted?: (gameId: string) => void;
 }) {
   const t = useTheme();
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  // Keyed on public_id, which is what the delete call takes.
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function handleDelete(game: Game) {
     Alert.alert("Delete game?", `Delete this game vs ${game.opponent_name}?`, [
@@ -30,10 +31,10 @@ export function GamesTable({
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          setDeletingId(game.id);
+          setDeletingId(game.public_id);
           try {
-            await api.deleteGame(game.id);
-            onDeleted?.(game.id);
+            await api.deleteGame(game.public_id);
+            onDeleted?.(game.public_id);
           } catch {
             // silently reset — user can retry
           } finally {
@@ -79,7 +80,7 @@ export function GamesTable({
                   </View>
                 </View>
                 {onDeleted && (
-                  <Pressable onPress={() => handleDelete(game)} disabled={deletingId === game.id} style={{ padding: 6 }}>
+                  <Pressable onPress={() => handleDelete(game)} disabled={deletingId === game.public_id} style={{ padding: 6 }}>
                     <Ionicons name="trash-outline" size={16} color={t.textFaint} />
                   </Pressable>
                 )}

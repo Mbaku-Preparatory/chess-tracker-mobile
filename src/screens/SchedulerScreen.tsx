@@ -146,12 +146,12 @@ export function SchedulerScreen() {
               session={item}
               onToggleComplete={(session) =>
                 dispatch(
-                  updatePrepSession(session.id, {
+                  updatePrepSession(session.public_id, {
                     completed_at: session.completed_at ? null : new Date().toISOString(),
                   })
                 )
               }
-              onDelete={(session) => dispatch(deletePrepSession(session.id))}
+              onDelete={(session) => dispatch(deletePrepSession(session.public_id))}
             />
           </View>
         )}

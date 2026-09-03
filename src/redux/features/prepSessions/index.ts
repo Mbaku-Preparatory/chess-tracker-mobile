@@ -39,7 +39,7 @@ const prepSessionsReducer = (state = initialState, action: any): PrepSessionsSta
       return {
         ...state,
         items: state.items.map((item) =>
-          item.id === action.payload.item.id ? action.payload.item : item
+          item.public_id === action.payload.item.public_id ? action.payload.item : item
         ),
       };
 
@@ -47,7 +47,7 @@ const prepSessionsReducer = (state = initialState, action: any): PrepSessionsSta
       if (action.errors) {
         return state;
       }
-      return { ...state, items: state.items.filter((item) => item.id !== action.payload.id) };
+      return { ...state, items: state.items.filter((item) => item.public_id !== action.payload.publicId) };
 
     case ADD_PREP_SESSION:
       return { ...state, items: [action.payload, ...state.items] };
@@ -55,7 +55,9 @@ const prepSessionsReducer = (state = initialState, action: any): PrepSessionsSta
     case REPLACE_PREP_SESSION:
       return {
         ...state,
-        items: state.items.map((item) => (item.id === action.payload.id ? action.payload : item)),
+        items: state.items.map((item) =>
+          item.public_id === action.payload.public_id ? action.payload : item
+        ),
       };
 
     default:

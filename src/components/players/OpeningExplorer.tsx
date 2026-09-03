@@ -27,7 +27,7 @@ function WDBBar({ white, draw, black, playerColor }: { white: number; draw: numb
 
 function toGameObject(g: ExplorerDbGame): Game {
   return {
-    id: g.id, event: g.event, site: "", round: g.round, date_played: g.date_played,
+    id: g.id, public_id: g.public_id, event: g.event, site: "", round: g.round, date_played: g.date_played,
     opponent_name: g.opponent_name, opponent_rating: g.opponent_rating ?? null,
     color_played: g.color_played, result: g.result, eco_code: null,
     opening_name: g.opening_name || null, opening_family: null, num_moves: null,
