@@ -33,6 +33,8 @@ export interface ParsedMove {
 }
 
 export interface ParsedPgn {
+  /** The PGN's Result tag, e.g. "1-0". null when absent. */
+  result: string | null;
   moves: ParsedMove[];
   players: PgnPlayers;
 }
@@ -43,7 +45,7 @@ export interface ParsedPgn {
  * replay the game a second time to collect per-ply FENs.
  */
 export function parsePgn(pgn: string | null): ParsedPgn {
-  if (!pgn) return { moves: [], players: { white: null, black: null } };
+  if (!pgn) return { moves: [], players: { white: null, black: null }, result: null };
   // Held outside the try: chess.js fills the roster before it walks the moves,
   // so a game that throws on an illegal move still has real names on it.
   const chess = new Chess();
@@ -63,7 +65,12 @@ export function parsePgn(pgn: string | null): ParsedPgn {
         color: move.color,
       }))
     : [];
-  return { moves, players: playersFromHeaders(chess.getHeaders()) };
+  const headers = chess.getHeaders();
+  return {
+    moves,
+    players: playersFromHeaders(headers),
+    result: headers.Result?.trim() || null,
+  };
 }
 
 export function parsePgnMoves(pgn: string): ParsedMove[] {
@@ -77,6 +84,31 @@ const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 export interface SidePlayer {
   name: string;
   rating: string | null;
+}
+
+/** "1", "0" or "½" per side; null when the game has no recorded result. */
+export type SideScores = Record<"white" | "black", string | null>;
+
+const NO_SCORES: SideScores = { white: null, black: null };
+
+/**
+ * Each side's score from the PGN's Result tag.
+ *
+ * The tag is authoritative: it is written from the board's point of view and
+ * covers both sides. A Game record stores its result relative to the player
+ * being scouted, so the caller passes that as a fallback instead.
+ */
+export function scoresFromResultTag(tag: string | null): SideScores | null {
+  switch (tag) {
+    case "1-0":
+      return { white: "1", black: "0" };
+    case "0-1":
+      return { white: "0", black: "1" };
+    case "1/2-1/2":
+      return { white: "½", black: "½" };
+    default:
+      return null;
+  }
 }
 
 export interface PgnPlayers {
@@ -101,7 +133,7 @@ function playersFromHeaders(headers: Record<string, string>): PgnPlayers {
 }
 
 /** One name plate, width-matched to the board so long names truncate. */
-function PlayerPlate({ player, color, width }: { player: SidePlayer; color: "white" | "black"; width: number }) {
+function PlayerPlate({ player, color, width, score }: { player: SidePlayer; color: "white" | "black"; width: number; score?: string | null }) {
   const t = useTheme();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, width }}>
@@ -118,6 +150,17 @@ function PlayerPlate({ player, color, width }: { player: SidePlayer; color: "whi
       <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "700", color: t.text }}>
         {player.name}
       </Text>
+      {score ? (
+        <Text
+          style={{
+            fontSize: 11, fontWeight: "800", color: t.text,
+            backgroundColor: t.elevated, borderRadius: 4,
+            paddingHorizontal: 5, paddingVertical: 1, overflow: "hidden",
+          }}
+        >
+          {score}
+        </Text>
+      ) : null}
       {player.rating ? <Text style={{ fontSize: 11, color: t.textMuted }}>{player.rating}</Text> : null}
     </View>
   );
@@ -141,6 +184,7 @@ export function GameReplay({
   onClose,
   filename,
   players,
+  scores,
 }: {
   pgn: string | null;
   loading?: boolean;
@@ -151,13 +195,15 @@ export function GameReplay({
   filename: string;
   /** Used only for sides the PGN itself does not name. */
   players?: { white?: SidePlayer; black?: SidePlayer };
+  /** Fallback scores, used only when the PGN carries no Result tag. */
+  scores?: SideScores;
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [analysisLoading, setAnalysisLoading] = useState<"lichess" | null>(null);
 
-  const { moves, players: named } = useMemo(() => parsePgn(pgn), [pgn]);
+  const { moves, players: named, result: resultTag } = useMemo(() => parsePgn(pgn), [pgn]);
 
   const goTo = useCallback((i: number) => setCurrentIndex(Math.max(-1, Math.min(i, moves.length - 1))), [moves.length]);
 
@@ -208,6 +254,8 @@ export function GameReplay({
 
   // Plates are placed by seat, not by colour: whoever is at the bottom of the
   // board gets the bottom plate, which flips with the orientation.
+  // PGN tag first, caller's fallback second — the tag covers both sides.
+  const sideScores = scoresFromResultTag(resultTag) ?? scores ?? NO_SCORES;
   const white = named.white ?? players?.white ?? { name: "White", rating: null };
   const black = named.black ?? players?.black ?? { name: "Black", rating: null };
   const bottom = orientation === "white" ? white : black;
@@ -227,7 +275,12 @@ export function GameReplay({
           <View style={[st.boardArea, { backgroundColor: t.elevated }]}>
             <EvalBar score={engine.score} mate={engine.mate} depth={engine.depth} isAnalyzing={engine.isAnalyzing} source={engine.source} height={boardSize} />
             <View style={{ gap: 6 }}>
-              <PlayerPlate player={top} color={orientation === "white" ? "black" : "white"} width={boardSize} />
+              <PlayerPlate
+                player={top}
+                color={orientation === "white" ? "black" : "white"}
+                width={boardSize}
+                score={sideScores[orientation === "white" ? "black" : "white"]}
+              />
               {loading ? (
                 <View style={{ width: boardSize, height: boardSize, alignItems: "center", justifyContent: "center" }}>
                   <ActivityIndicator color={t.brand(600)} />
@@ -235,7 +288,7 @@ export function GameReplay({
               ) : (
                 <ChessBoard fen={currentFen} orientation={orientation} size={boardSize} highlights={highlights} />
               )}
-              <PlayerPlate player={bottom} color={orientation} width={boardSize} />
+              <PlayerPlate player={bottom} color={orientation} width={boardSize} score={sideScores[orientation]} />
             </View>
           </View>
 
