@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo } from "react";
 import { useColorScheme } from "react-native";
 
 import { useAppSelector } from "@/redux/hooks";
-import { brandColor, getThemeVars, type BrandShade } from "@/lib/themes";
+import { brandColor, type BrandShade } from "@/lib/themes";
 import { dark, gray, semantic } from "./colors";
 
 export interface AppTheme {
@@ -28,11 +28,11 @@ export interface AppTheme {
   black: string;
 }
 
-function buildTheme(mode: "light" | "dark", vars: Record<string, string>): AppTheme {
+function buildTheme(mode: "light" | "dark"): AppTheme {
   const isDark = mode === "dark";
   return {
     mode,
-    brand: (shade: BrandShade) => brandColor(vars, shade),
+    brand: (shade: BrandShade) => brandColor(shade),
     bg: isDark ? dark.bg : gray[50],
     surface: isDark ? dark.surface : "#ffffff",
     card: isDark ? dark.surface : "#ffffff",
@@ -54,16 +54,15 @@ function buildTheme(mode: "light" | "dark", vars: Record<string, string>): AppTh
   };
 }
 
-const ThemeCtx = createContext<AppTheme>(buildTheme("light", getThemeVars("ocean")));
+const ThemeCtx = createContext<AppTheme>(buildTheme("light"));
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { colorScheme, customColor, appearance } = useAppSelector((s) => s.theme);
+  const appearance = useAppSelector((s) => s.theme.appearance);
   // useColorScheme() is called unconditionally - it's a hook, so it can't sit behind the
   // "system" branch - and only consulted when the user hasn't picked an explicit mode.
   const systemMode = useColorScheme() === "dark" ? "dark" : "light";
   const mode = appearance === "system" ? systemMode : appearance;
-  const vars = useMemo(() => getThemeVars(colorScheme, customColor), [colorScheme, customColor]);
-  const theme = useMemo(() => buildTheme(mode, vars), [mode, vars]);
+  const theme = useMemo(() => buildTheme(mode), [mode]);
   return <ThemeCtx.Provider value={theme}>{children}</ThemeCtx.Provider>;
 }
 

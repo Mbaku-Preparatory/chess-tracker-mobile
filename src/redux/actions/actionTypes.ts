@@ -29,7 +29,6 @@ export const RESET_GAMES_FILTERS = "games/resetFilters";
 
 // ── Theme ─────────────────────────────────────────────
 export const LOAD_THEME = "theme/load";
-export const SET_COLOR_SCHEME = "theme/setColorScheme";
 export const SET_APPEARANCE = "theme/setAppearance";
 
 // ── Prep Sessions (Schedule) ──────────────────────────

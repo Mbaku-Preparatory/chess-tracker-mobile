@@ -8,8 +8,8 @@ import { useNavigation } from "@react-navigation/native";
 import { api } from "@/lib/api";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { clearAuth, setProfilePic } from "@/redux/actions/auth";
+import { AppearancePicker } from "@/components/ui/AppearancePicker";
 import { useTheme } from "@/theme/ThemeContext";
-import { ThemePicker } from "@/components/ui/ThemePicker";
 import type { RootStackParamList } from "@/navigation/types";
 import Logo from "../ui/Logo";
 
@@ -98,7 +98,7 @@ export function AppHeader() {
               </View>
 
               <View style={[st.section, { borderColor: t.border }]}>
-                <ThemePicker />
+                <AppearancePicker />
               </View>
 
               <TouchableOpacity
