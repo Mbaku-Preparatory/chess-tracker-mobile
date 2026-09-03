@@ -147,21 +147,19 @@ function PlayerPlate({ player, color, width, score }: { player: SidePlayer; colo
           borderColor: color === "white" ? "#d1d5db" : "#4b5563",
         }}
       />
-      <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "700", color: t.text }}>
+      {/* No flex:1 on the name — that would push the score out to the right
+          edge with the rating. The name takes what it needs and truncates,
+          the score sits against it, and marginLeft:"auto" on the rating is
+          what holds the right edge. */}
+      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13, fontWeight: "700", color: t.text }}>
         {player.name}
       </Text>
       {score ? (
-        <Text
-          style={{
-            fontSize: 11, fontWeight: "800", color: t.text,
-            backgroundColor: t.elevated, borderRadius: 4,
-            paddingHorizontal: 5, paddingVertical: 1, overflow: "hidden",
-          }}
-        >
-          {score}
-        </Text>
+        <Text style={{ fontSize: 13, fontWeight: "800", color: t.text }}>{score}</Text>
       ) : null}
-      {player.rating ? <Text style={{ fontSize: 11, color: t.textMuted }}>{player.rating}</Text> : null}
+      {player.rating ? (
+        <Text style={{ marginLeft: "auto", fontSize: 11, color: t.textMuted }}>{player.rating}</Text>
+      ) : null}
     </View>
   );
 }
