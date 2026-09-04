@@ -24,7 +24,7 @@ export function UpdateRequiredScreen({ gate }: { gate: VersionGate }) {
 
       <Text style={[st.body, { color: t.textMuted }]}>
         {gate.message ??
-          "This version of Mbaku Preparatory is no longer supported. Update to keep using the app."}
+          "This version of Chess Preparatory is no longer supported. Update to keep using the app."}
       </Text>
 
       <View style={[st.versions, { borderColor: t.border, backgroundColor: t.surface }]}>

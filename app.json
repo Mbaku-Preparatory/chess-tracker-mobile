@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Mbaku Preparatory",
+    "name": "Chess Preparatory",
     "slug": "chess-tracker-mobile-app",
     "version": "1.0.5",
     "orientation": "portrait",
@@ -8,17 +8,17 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mbakupreparatory.app"
+      "bundleIdentifier": "com.chesspreparatory.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0074C5",
+        "backgroundColor": "#7CAC42",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.mbakupreparatory.app",
+      "package": "com.chesspreparatory.app",
       "versionCode": 7,
       "permissions": [
         "android.permission.INTERNET",
@@ -43,7 +43,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#0074C5"
+          "color": "#7CAC42"
         }
       ],
       "@sentry/react-native"

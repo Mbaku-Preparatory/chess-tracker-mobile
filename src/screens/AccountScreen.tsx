@@ -123,7 +123,7 @@ export function AccountScreen({ navigation }: Props) {
       ok ? "Test sent" : "Notifications are off",
       ok
         ? "A test reminder will arrive in about 5 seconds."
-        : "Notifications are blocked for this app. Enable them in Settings › Apps › Mbaku Preparatory › Notifications."
+        : "Notifications are blocked for this app. Enable them in Settings › Apps › Chess Preparatory › Notifications."
     );
   }
 

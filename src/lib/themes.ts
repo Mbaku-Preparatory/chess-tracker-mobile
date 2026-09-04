@@ -12,17 +12,21 @@
 const rgb = (r: number, g: number, b: number) => `${r} ${g} ${b}`;
 
 const BRAND: Record<string, string> = {
-      "--brand-50":  rgb(240, 247, 255),
-      "--brand-100": rgb(224, 239, 254),
-      "--brand-200": rgb(186, 224, 253),
-      "--brand-300": rgb(124, 200, 251),
-      "--brand-400": rgb(54,  173, 246),
-      "--brand-500": rgb(12,  147, 231),
-      "--brand-600": rgb(0,   116, 197),
-      "--brand-700": rgb(1,    93, 160),
-      "--brand-800": rgb(6,    79, 132),
-      "--brand-900": rgb(11,   66, 110),
-      "--brand-950": rgb(7,    42,  73),
+      // Board Green — kept in lockstep with the frontend's globals.css ramp.
+      // --brand-500 is the mark's own green (#7cac42); the filled-button step
+      // at 600 is darker on purpose, because #7cac42 carries white text at
+      // only 2.7:1 while #5c7a33 clears AA at 4.9:1.
+      "--brand-50":  rgb(243, 248, 234),
+      "--brand-100": rgb(228, 241, 207),
+      "--brand-200": rgb(203, 227, 166),
+      "--brand-300": rgb(174, 209, 119),
+      "--brand-400": rgb(147, 190,  82),
+      "--brand-500": rgb(124, 172,  66),
+      "--brand-600": rgb(92,  122,  51),
+      "--brand-700": rgb(74,   99,  41),
+      "--brand-800": rgb(59,   79,  33),
+      "--brand-900": rgb(47,   64,  27),
+      "--brand-950": rgb(27,   37,  16),
 };
 
 export type BrandShade = 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 950;

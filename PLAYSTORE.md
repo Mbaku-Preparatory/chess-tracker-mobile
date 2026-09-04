@@ -29,10 +29,10 @@ two weeks after the closed track fills, regardless of how ready the binary is.
 
 | | |
 |---|---|
-| Application id | `com.mbakupreparatory.app` |
-| Store name | Mbaku Preparatory |
+| Application id | `com.chesspreparatory.app` |
+| Store name | Chess Preparatory |
 | Backend | `https://mbaku-preparatory-production.up.railway.app/api` |
-| Privacy policy | `https://mbaku-preparatory.vercel.app/privacy` |
+| Privacy policy | `https://www.chesspreparatory.com/privacy` |
 
 The application id is **permanent**. Google Play binds a listing to it forever;
 changing it means publishing a brand-new app with zero installs and reviews.
@@ -286,7 +286,7 @@ instruction; no user data is sent to them.
 
 - [x] Play Console developer account and identity verification — **cleared 2026-08-17**
 - [ ] **Closed testing track: 12 testers × 14 continuous days.** Start recruiting now; see the warning at the top
-- [ ] Point the Console's privacy policy field at `mbaku-preparatory.vercel.app/privacy`
+- [ ] Point the Console's privacy policy field at `www.chesspreparatory.com/privacy`
 - [ ] Data safety form — fresh pass, not a reuse. FIDE ID is new
 - [ ] Store listing: short (80 char) + full (4000 char) description, feature
       graphic (1024×500), 512×512 icon, at least two phone screenshots, app

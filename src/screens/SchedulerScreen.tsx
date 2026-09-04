@@ -122,7 +122,7 @@ export function SchedulerScreen() {
                   </Text>
                   <Text style={{ color: t.textMuted, fontSize: 12, marginTop: 2 }}>
                     Notifications are blocked for this app, so scheduled sessions won&apos;t alert you.
-                    Enable them in Settings › Apps › Mbaku Preparatory › Notifications.
+                    Enable them in Settings › Apps › Chess Preparatory › Notifications.
                   </Text>
                 </View>
               </View>
