@@ -24,6 +24,8 @@ import { SessionNewScreen } from "@/screens/SessionNewScreen";
 import { SessionDetailScreen } from "@/screens/SessionDetailScreen";
 import { AccountScreen } from "@/screens/AccountScreen";
 import MyProfileScreen from "@/screens/MyProfileScreen";
+import { OlympiadScreen } from "@/screens/OlympiadScreen";
+import { GamesScreen } from "@/screens/GamesScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -31,6 +33,8 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const TAB_ICONS: Record<keyof MainTabParamList, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Schedule: { active: "today", inactive: "today-outline" },
   Players: { active: "people", inactive: "people-outline" },
+  Olympiad: { active: "earth", inactive: "earth-outline" },
+  Games: { active: "grid", inactive: "grid-outline" },
 };
 
 function MainTabs() {
@@ -54,6 +58,10 @@ function MainTabs() {
           existing navigate("Players") call sites keep working. */}
       <Tab.Screen name="Players" component={PlayersScreen} options={{ tabBarLabel: "Prep" }} />
       <Tab.Screen name="Schedule" component={SchedulerScreen} />
+      <Tab.Screen name="Olympiad" component={OlympiadScreen} />
+      {/* Empty on purpose for now. Placed last so the three working tabs keep
+          the positions people have already learned. */}
+      <Tab.Screen name="Games" component={GamesScreen} />
     </Tab.Navigator>
   );
 }

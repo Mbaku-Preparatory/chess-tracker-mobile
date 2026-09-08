@@ -610,3 +610,50 @@ export interface Payment {
   /** Present on create: true when an unfinished checkout was handed back. */
   reused_existing?: boolean;
 }
+
+
+/**
+ * The Chess Olympiad browser.
+ *
+ * A team event is navigated by country and round rather than by opening, so
+ * these carry a federation on each side and the round as written. Both are
+ * blank on games that came from TWIC — that source's PGN has no federation at
+ * all and the round was discarded before it was ever stored — so the UI shows
+ * a dash rather than inventing one.
+ */
+export interface OlympiadGame {
+  id: number;
+  white: string;
+  black: string;
+  white_federation: string;
+  black_federation: string;
+  white_elo: number | null;
+  black_elo: number | null;
+  result: string;
+  eco: string;
+  opening_name: string;
+  event: string;
+  site: string;
+  year: number | null;
+  round: string;
+}
+
+export interface OlympiadGameWithMoves extends OlympiadGame {
+  moves: string;
+}
+
+export interface OlympiadFilters {
+  events: { year: number; event: string; games: number }[];
+  /** Only federations that actually played — never the full ISO list. */
+  federations: string[];
+  rounds: string[];
+  total_games: number;
+}
+
+export interface OlympiadGamePage {
+  results: OlympiadGame[];
+  count: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}

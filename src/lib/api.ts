@@ -395,6 +395,32 @@ export const api = {
     }
   },
 
+  /** Which Olympiads exist, and the only filter values that return anything. */
+  getOlympiadFilters(): Promise<import("@/types").OlympiadFilters> {
+    return fetchJson(`${API_BASE}/openings/olympiad/events/`);
+  },
+
+  /** One page of Olympiad games. Carries no movetext — see getOlympiadGameMoves. */
+  getOlympiadGames(params: {
+    year?: number | null;
+    federation?: string | null;
+    round?: string | null;
+    search?: string | null;
+    page?: number;
+  }): Promise<import("@/types").OlympiadGamePage> {
+    const q = new URLSearchParams();
+    if (params.year) q.set("year", String(params.year));
+    if (params.federation) q.set("federation", params.federation);
+    if (params.round) q.set("round", params.round);
+    if (params.search) q.set("search", params.search);
+    if (params.page && params.page > 1) q.set("page", String(params.page));
+    return fetchJson(`${API_BASE}/openings/olympiad/games/?${q}`);
+  },
+
+  getOlympiadGameMoves(id: number): Promise<import("@/types").OlympiadGameWithMoves> {
+    return fetchJson(`${API_BASE}/openings/olympiad/games/${id}/moves/`);
+  },
+
   getMasterGames(params: { eco?: string; event?: string; limit?: number }): Promise<import("@/types").MasterGame[]> {
     const qs = new URLSearchParams();
     if (params.eco)   qs.set("eco",   params.eco);
