@@ -16,6 +16,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
+import { duplicatePlayerFrom } from "@/lib/duplicatePlayer";
 import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -120,7 +121,15 @@ export default function MyProfileScreen({ navigation }: Props) {
       setMe(await api.setMyFideId(value));
       setFideInput("");
     } catch (err) {
-      setError(userMessage(err, "Couldn't save that FIDE ID."));
+      // They already track this ID as an opponent — usually themselves, added
+      // before they filled this in. Say which row it is; "you already have
+      // this" without naming it is not something anyone can act on.
+      const existing = duplicatePlayerFrom(err);
+      setError(
+        existing
+          ? `You already track FIDE ID ${existing.fide_id} as "${existing.full_name}" in your opponents. Delete that profile if it is really you, then add the ID here.`
+          : userMessage(err, "Couldn't save that FIDE ID.")
+      );
     } finally {
       setSaving(false);
     }

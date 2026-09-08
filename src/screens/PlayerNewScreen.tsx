@@ -13,6 +13,7 @@ import { FederationSelect } from "@/components/ui/FederationSelect";
 import type { RootStackParamList } from "@/navigation/types";
 import type { PlayerLookupResult } from "@/types";
 import { userMessage } from "@/lib/apiError";
+import { duplicatePlayerFrom } from "@/lib/duplicatePlayer";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PlayerNew">;
 
@@ -214,6 +215,15 @@ export function PlayerNewScreen({ navigation }: Props) {
       const source = chesscomUsername.trim() ? "chesscom" : lichessUsername.trim() ? "lichess" : "chess_results";
       navigation.replace("PlayerImport", { slug: player.public_id, source });
     } catch (err) {
+      // Already on their list — usually themselves, or a second tap on Add.
+      // They asked to reach this player, so open the row that exists rather
+      // than reporting a failure for something that is already done.
+      const existing = duplicatePlayerFrom(err);
+      if (existing) {
+        if (existing.is_self) navigation.replace("MyProfile");
+        else navigation.replace("PlayerDetail", { slug: existing.slug });
+        return;
+      }
       setError(userMessage(err, "Could not create player. Try again."));
     } finally {
       setLoading(false);
