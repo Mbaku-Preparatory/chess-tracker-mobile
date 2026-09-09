@@ -1,7 +1,12 @@
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Circle, Defs, G, Line, Marker, Path, Polygon } from "react-native-svg";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
+
+// Warm amber over either square colour, and a translucent mark for legal
+// destinations so the square beneath still reads.
+const SELECTED_SQUARE = "#f6c344";
+const TARGET_MARK = "rgba(20,20,20,0.32)";
 
 // Piece artwork traced from the "cburnett" SVG chess set (CC BY-SA 3.0,
 // the same set Lichess uses) rather than Unicode chess glyphs: glyph
@@ -206,6 +211,9 @@ export function ChessBoard({
   arrow,
   lightSquare = "#eeeed2",
   darkSquare = "#769656",
+  onSquarePress,
+  selected = null,
+  targets = [],
 }: {
   fen: string;
   orientation?: "white" | "black";
@@ -214,10 +222,17 @@ export function ChessBoard({
   arrow?: BoardArrow | null;
   lightSquare?: string;
   darkSquare?: string;
+  /** Makes the board interactive. Omit it and nothing below has any effect. */
+  onSquarePress?: (square: string) => void;
+  /** The square whose piece is picked up. */
+  selected?: string | null;
+  /** Where that piece may legally go. */
+  targets?: string[];
 }) {
   const squareSize = size / 8;
   const board = parseFenBoard(fen);
   const highlightMap = new Map(highlights.map((h) => [h.square, h.color]));
+  const targetSet = new Set(targets);
 
   const displayRows = orientation === "white" ? board : [...board].reverse();
 
@@ -235,21 +250,50 @@ export function ChessBoard({
               // square is odd parity, not even: a1 = 0+1 = dark, h1 = 7+1 = light.
               const isDark = (file + rank) % 2 === 1;
               const highlight = highlightMap.get(square);
+              const isSelected = selected === square;
+              const isTarget = targetSet.has(square);
+              const Square = onSquarePress ? Pressable : View;
               return (
-                <View
+                <Square
                   key={square}
+                  onPress={onSquarePress ? () => onSquarePress(square) : undefined}
                   style={{
                     width: squareSize,
                     height: squareSize,
-                    backgroundColor: highlight ?? (isDark ? darkSquare : lightSquare),
+                    backgroundColor: isSelected
+                      ? SELECTED_SQUARE
+                      : highlight ?? (isDark ? darkSquare : lightSquare),
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  {piece && (
-                    <PieceIcon type={piece} size={squareSize * 0.86} />
+                  {piece && <PieceIcon type={piece} size={squareSize * 0.86} />}
+                  {/* A dot on an empty square, a ring around an occupied one:
+                      a dot centred over a piece hides the piece, and knowing
+                      what you are about to take matters more than the dot. */}
+                  {isTarget && (
+                    <View
+                      pointerEvents="none"
+                      style={
+                        piece
+                          ? {
+                              position: "absolute",
+                              width: squareSize * 0.92,
+                              height: squareSize * 0.92,
+                              borderRadius: squareSize * 0.46,
+                              borderWidth: squareSize * 0.07,
+                              borderColor: TARGET_MARK,
+                            }
+                          : {
+                              width: squareSize * 0.3,
+                              height: squareSize * 0.3,
+                              borderRadius: squareSize * 0.15,
+                              backgroundColor: TARGET_MARK,
+                            }
+                      }
+                    />
                   )}
-                </View>
+                </Square>
               );
             })}
           </View>

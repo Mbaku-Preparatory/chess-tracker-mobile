@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/lib/api";
 import { useStockfish } from "@/hooks/useStockfish";
 import { useTheme } from "@/theme/ThemeContext";
+import { useAnalysisLine } from "./useAnalysisLine";
 import { ChessBoard } from "./ChessBoard";
 import { EvalBar } from "@/components/ui/EvalBar";
 
@@ -76,8 +77,6 @@ export function parsePgn(pgn: string | null): ParsedPgn {
 export function parsePgnMoves(pgn: string): ParsedMove[] {
   return parsePgn(pgn).moves;
 }
-
-const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 // ── Board name plates ─────────────────────────────────────────────────────────
 
@@ -198,14 +197,33 @@ export function GameReplay({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const [currentIndex, setCurrentIndex] = useState(-1);
   const [analysisLoading, setAnalysisLoading] = useState<"lichess" | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
-  const { moves, players: named, result: resultTag } = useMemo(() => parsePgn(pgn), [pgn]);
+  const { moves: gameMoves, players: named, result: resultTag } = useMemo(() => parsePgn(pgn), [pgn]);
 
-  const goTo = useCallback((i: number) => setCurrentIndex(Math.max(-1, Math.min(i, moves.length - 1))), [moves.length]);
+  // The game is never edited. Playing a move that leaves it opens a branch,
+  // and the line below reads the game up to that point followed by the branch.
+  const line = useAnalysisLine(gameMoves);
+  const { moves, index: currentIndex, fen: currentFen, goTo } = line;
 
-  const currentFen = currentIndex === -1 ? START_FEN : moves[currentIndex]?.fen ?? START_FEN;
+  // Tap a piece to pick it up, tap again to put it down, tap a legal square to
+  // move. Tapping another of your own pieces switches to it rather than
+  // failing, which is what people expect and costs nothing.
+  const handleSquare = useCallback(
+    (square: string) => {
+      if (selected === square) {
+        setSelected(null);
+        return;
+      }
+      if (selected && line.play(selected, square)) {
+        setSelected(null);
+        return;
+      }
+      setSelected(line.legalTargets(square).length > 0 ? square : null);
+    },
+    [selected, line]
+  );
   const engine = useStockfish(currentFen, !loading && moves.length >= 0);
 
   const highlights = [];
@@ -284,7 +302,15 @@ export function GameReplay({
                   <ActivityIndicator color={t.brand(600)} />
                 </View>
               ) : (
-                <ChessBoard fen={currentFen} orientation={orientation} size={boardSize} highlights={highlights} />
+                <ChessBoard
+                  fen={currentFen}
+                  orientation={orientation}
+                  size={boardSize}
+                  highlights={highlights}
+                  onSquarePress={handleSquare}
+                  selected={selected}
+                  targets={selected ? line.legalTargets(selected) : []}
+                />
               )}
               <PlayerPlate player={bottom} color={orientation} width={boardSize} score={sideScores[orientation]} />
             </View>
@@ -297,19 +323,60 @@ export function GameReplay({
             )}
             {!loading && moves.length > 0 && (
               <ScrollView style={st.moveListScroll} nestedScrollEnabled>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 3 }}>
-                  {moves.map((mv, idx) => (
-                    <View key={idx} style={{ flexDirection: "row", alignItems: "baseline" }}>
-                      {mv.color === "w" && (
-                        <Text style={{ color: t.textFaint, fontSize: 13, marginRight: 2 }}>{mv.moveNumber}.</Text>
-                      )}
-                      <Pressable onPress={() => goTo(idx)} style={[st.moveChip, idx === currentIndex ? { backgroundColor: t.brand(600) } : null]}>
-                        <Text style={{ fontSize: 13, fontFamily: "monospace", color: idx === currentIndex ? "#fff" : t.text }}>{mv.san}</Text>
-                      </Pressable>
-                    </View>
-                  ))}
+                <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 3 }}>
+                  {moves.map((mv, idx) => {
+                    const branched = line.branchStartsAt !== null && idx >= line.branchStartsAt;
+                    const current = idx === currentIndex;
+                    return (
+                      <View key={idx} style={{ flexDirection: "row", alignItems: "center" }}>
+                        {/* Where the game stops and your line starts. */}
+                        {idx === line.branchStartsAt && (
+                          <Text style={{ color: t.brand(600), fontSize: 13, marginHorizontal: 3 }}>(</Text>
+                        )}
+                        {mv.color === "w" && (
+                          <Text style={{ color: t.textFaint, fontSize: 13, marginRight: 2 }}>{mv.moveNumber}.</Text>
+                        )}
+                        <Pressable
+                          onPress={() => goTo(idx)}
+                          style={[
+                            st.moveChip,
+                            current ? { backgroundColor: branched ? t.brand(500) : t.brand(600) } : null,
+                          ]}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              fontFamily: "monospace",
+                              fontStyle: branched ? "italic" : "normal",
+                              color: current ? "#fff" : branched ? t.brand(600) : t.text,
+                            }}
+                          >
+                            {mv.san}
+                          </Text>
+                        </Pressable>
+                        {branched && idx === moves.length - 1 && (
+                          <Text style={{ color: t.brand(600), fontSize: 13, marginHorizontal: 3 }}>)</Text>
+                        )}
+                      </View>
+                    );
+                  })}
                 </View>
               </ScrollView>
+            )}
+
+            {line.branch && (
+              <Pressable
+                onPress={() => {
+                  line.clearBranch();
+                  setSelected(null);
+                }}
+                style={[st.backToGame, { borderColor: t.brand(600) }]}
+              >
+                <Ionicons name="return-up-back" size={14} color={t.brand(600)} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: t.brand(600) }}>
+                  Back to the game
+                </Text>
+              </Pressable>
             )}
           </View>
 
@@ -355,6 +422,17 @@ const st = StyleSheet.create({
   closeBtn: { padding: 4 },
   boardArea: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 20 },
   moveListWrap: { padding: 16 },
+  backToGame: {
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderRadius: 999,
+  },
   moveListScroll: { maxHeight: 140 },
   moveChip: { borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, marginRight: 4 },
   actionsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, justifyContent: "flex-end" },
