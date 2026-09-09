@@ -57,11 +57,12 @@ function MainTabs() {
           not Schedule - is the app's primary destination. The route name stays "Players" so the
           existing navigate("Players") call sites keep working. */}
       <Tab.Screen name="Players" component={PlayersScreen} options={{ tabBarLabel: "Prep" }} />
-      <Tab.Screen name="Schedule" component={SchedulerScreen} />
       <Tab.Screen name="Olympiad" component={OlympiadScreen} />
-      {/* Empty on purpose for now. Placed last so the three working tabs keep
-          the positions people have already learned. */}
       <Tab.Screen name="Games" component={GamesScreen} />
+      {/* Schedule sits last: it is the one tab you go to on purpose, on the day
+          you need it, rather than something you browse. The three ahead of it
+          are all "show me chess". */}
+      <Tab.Screen name="Schedule" component={SchedulerScreen} />
     </Tab.Navigator>
   );
 }
