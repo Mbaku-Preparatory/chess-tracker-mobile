@@ -402,6 +402,7 @@ export const api = {
 
   /** One page of Olympiad games. Carries no movetext — see getOlympiadGameMoves. */
   getOlympiadGames(params: {
+    section?: string | null;
     year?: number | null;
     federation?: string | null;
     round?: string | null;
@@ -409,6 +410,7 @@ export const api = {
     page?: number;
   }): Promise<import("@/types").OlympiadGamePage> {
     const q = new URLSearchParams();
+    if (params.section) q.set("section", params.section);
     if (params.year) q.set("year", String(params.year));
     if (params.federation) q.set("federation", params.federation);
     if (params.round) q.set("round", params.round);

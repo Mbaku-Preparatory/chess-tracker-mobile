@@ -638,6 +638,8 @@ export interface OlympiadGame {
   round: string;
   /** The round a reader means: "3.31" is round 3. Null when unrecorded. */
   round_number: number | null;
+  /** "open" | "women". Blank on games that are not Olympiad games. */
+  section: string;
 }
 
 export interface OlympiadGameWithMoves extends OlympiadGame {
@@ -645,7 +647,9 @@ export interface OlympiadGameWithMoves extends OlympiadGame {
 }
 
 export interface OlympiadFilters {
-  events: { year: number; event: string; games: number }[];
+  events: { year: number; event: string; section: string; games: number }[];
+  /** The two Olympiads, with how many games each holds. */
+  sections: { value: string; label: string; games: number }[];
   /** Only federations that actually played — never the full ISO list. */
   federations: string[];
   rounds: string[];

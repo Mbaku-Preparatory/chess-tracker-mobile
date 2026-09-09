@@ -92,6 +92,7 @@ export function OlympiadScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [section, setSection] = useState("");
   const [federation, setFederation] = useState("");
   const [round, setRound] = useState("");
   const [yearInput, setYearInput] = useState("");
@@ -121,6 +122,7 @@ export function OlympiadScreen() {
       setError(null);
       try {
         const body = await api.getOlympiadGames({
+          section: section || null,
           year: /^\d{4}$/.test(year) ? Number(year) : null,
           federation: federation || null,
           round: round || null,
@@ -137,7 +139,7 @@ export function OlympiadScreen() {
         setLoadingMore(false);
       }
     },
-    [year, federation, round]
+    [section, year, federation, round]
   );
 
   useEffect(() => {
@@ -181,6 +183,35 @@ export function OlympiadScreen() {
             : "Chess Olympiad archive"
         }
       />
+
+      <View style={[st.segment, { borderColor: t.border, backgroundColor: t.elevated }]}>
+        {[
+          { value: "", label: "All" },
+          ...(filters?.sections ?? []).map((s) => ({ value: s.value, label: s.label })),
+        ].map((opt) => {
+          const active = section === opt.value;
+          return (
+            <Pressable
+              key={opt.value || "all"}
+              onPress={() => setSection(opt.value)}
+              style={[
+                st.segmentItem,
+                active && { backgroundColor: t.surface },
+              ]}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "700",
+                  color: active ? t.brand(600) : t.textMuted,
+                }}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 8 }}>
         <PickerSheet
@@ -252,6 +283,14 @@ export function OlympiadScreen() {
 
 const st = StyleSheet.create({
   label: { fontSize: 11, fontWeight: "700", letterSpacing: 0.6, marginBottom: 4 },
+  segment: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 12,
+  },
+  segmentItem: { flex: 1, alignItems: "center", paddingVertical: 7, borderRadius: 8 },
   yearField: {
     borderWidth: 1,
     borderRadius: 10,
