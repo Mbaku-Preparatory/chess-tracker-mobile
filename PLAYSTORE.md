@@ -1,7 +1,7 @@
 # Releasing to the Play Store
 
 > Supersedes `RELEASING.md`, which this file replaces wholesale. Last worked on
-> **2026-08-18**.
+> **2026-09-09**.
 
 ## Where things stand
 
@@ -10,8 +10,9 @@
 | Identity verification | **Cleared 2026-08-17.** No longer blocking. |
 | Version | `1.0.5` / `versionCode 7` — never published |
 | Privacy policy | Live, 200 signed out, covers all four processors |
-| Device test | Founder testing in progress |
-| Closed testing | **Not started — see the warning below** |
+| Device test | Ongoing — the founder tests on hardware continuously |
+| Release build | `:app:bundleRelease` verified locally 2026-09-09 (see *Verifying the release path*) |
+| Closed testing | **Not started — this is the critical path. See "The 14-day walkthrough".** |
 
 ### ⚠️ Read this before planning a launch date
 
@@ -24,6 +25,8 @@ contribution — so recruit the twelve *before* uploading.
 Verify the current threshold in the Console; Google has changed these numbers
 before. If it still applies, the earliest possible production date is roughly
 two weeks after the closed track fills, regardless of how ready the binary is.
+
+The step-by-step is in **"The 14-day walkthrough"** near the end of this file.
 
 ## Identity — do not change these casually
 
@@ -296,3 +299,197 @@ instruction; no user data is sent to them.
 - [ ] `pnpm eas:login`, then `pnpm build:aab`
 - [ ] Deploy the backend if sample-player seeding is to be live at signup
       (it is a backend change; pushing `develop` deploys to Railway production)
+
+---
+
+# The 14-day walkthrough
+
+Written for a **first** app on a personal Play Console account, in the order
+the Console actually makes you do it. Steps 1–7 are one sitting. Step 8 is the
+fourteen days. Nothing after step 8 can be started early.
+
+Google renames these screens every few months. If a label here does not match
+what you see, the shape of the task is still right — find the nearest thing.
+
+## 1. Create the app
+
+**All apps → Create app.**
+
+| Field | Value |
+|---|---|
+| App name | `Chess Preparatory` (30 chars max; this is the store title) |
+| **Package name** | **`com.chesspreparatory.app`** |
+| Default language | English (United Kingdom) — en-GB |
+| App or game | App |
+| Free or paid | **Free** — irreversible. A free app can never become paid |
+| Declarations | Developer Program Policies ✔, US export laws ✔ |
+
+**The package name is typed on this screen and is permanent from the moment
+you press Create app.** It must match `app.json`'s `android.package` exactly,
+or the bundle will be rejected at upload as belonging to a different app.
+
+The same string is also `ios.bundleIdentifier` and the default
+`MOBILE_UPDATE_URL` in the backend (`config/settings/base.py`), which is the
+Play listing link the in-app update screen opens. Three places, one string.
+
+> Older Consoles derived the id from the first bundle you uploaded. That is no
+> longer true — there is a **Package name** field on Create app, with a *Check
+> availability* button beside it. If the name is taken, do not improvise a
+> variant: changing it means changing `app.json`, the backend default and the
+> iOS id together, and every one of those is a decision rather than a typo fix.
+
+## 2. Create the closed track before anything else
+
+**Test and release → Testing → Closed testing → Create track.**
+
+Google gives you an `Alpha` track by default; either use it or make a new one.
+Do this *before* uploading, because the 14 days are counted on the track and
+you want testers joining the moment the build lands.
+
+**Testers tab → Create email list** → paste 12+ addresses → save → select the
+list for this track.
+
+> **Twelve is the floor, not the target.** Recruit **15 or so**. A tester who
+> uninstalls or opts out stops counting, and you find out at day 13.
+> They must each be a **Google account** that actually opts in via the link —
+> being on your list is not the same as being opted in.
+
+## 3. Fill in everything with a red mark
+
+The Console blocks the production application until every one of these is
+green. They can all be done before the build exists.
+
+**Policy → App content:**
+
+- **Privacy policy** → `https://www.chesspreparatory.com/privacy`
+- **Ads** → No, this app has no ads
+- **App access** → *All or some functionality is restricted.* Add the reviewer
+  credentials — see **App access** above; the account must already be
+  email-verified or login returns 403
+- **Content rating** → fill the questionnaire. Chess app, no violence, no user
+  interaction beyond your own data. Expect Everyone / PEGI 3
+- **Target audience** → 13+ (choosing an under-13 bracket pulls you into
+  Families policy, which is a much bigger form)
+- **Data safety** → the table in **Play Console — Data Safety answers** above.
+  Re-verify it; it was written before the daily puzzle shipped
+- **Government apps** → No
+- **Financial features** → **None.** True only because tips are gated out of
+  the native build
+- **Health apps** → No
+
+**Grow → Store presence → Main store listing:** see **Store listing assets**.
+
+## 4. Build the bundle
+
+```bash
+pnpm eas:login     # interactive, one time — cannot be automated
+pnpm build:aab
+```
+
+Accept EAS's offer to generate an upload keystore and let EAS hold it. Losing
+the upload key means never shipping an update to this listing again.
+
+## 5. Upload to the closed track
+
+**Closed testing → your track → Create new release.**
+
+- **Play App Signing**: accept. Google holds the real signing key; your EAS
+  keystore is only the *upload* key, and Google can reset that if it is lost.
+  This is the safe default and cannot be turned off later.
+- Upload the `.aab`.
+- **Release name** — the Console prefills `7 (1.0.5)`. Fine.
+- **Release notes** — required. One line is enough for a closed test.
+
+Save → Review release → **Start rollout to Closed testing**.
+
+## 6. Wait for review
+
+The first review on a new account takes longer than later ones — **a few days
+is normal**, and it is not a signal of a problem. The 14-day clock does not
+start until the build is live and testers are opted in.
+
+## 7. Get the twelve opted in
+
+Copy the **web opt-in link** from the track's Testers tab and send it. Each
+tester must:
+
+1. Open the link on the phone, signed in to the Google account you listed
+2. Tap **Become a tester**
+3. Follow the Play Store link and install
+
+**Then confirm.** Ask each person to send a screenshot of the app running.
+"I clicked the link" is not opted in, and the Console does not show you a
+per-tester list you can trust for this.
+
+## 8. Fourteen continuous days
+
+Twelve testers, opted in, unbroken. Anyone who opts out or uninstalls breaks
+their own streak.
+
+You can — and should — ship new builds to the track during this window. Each
+upload needs a **higher `versionCode`** (see **Bumping the version**), and
+uploading does not reset the clock. This is the time to act on what testers
+find.
+
+## 9. Apply for production
+
+Once the Console shows the closed test satisfied: **Production → Create new
+release**, upload the same or a newer bundle, and complete the **production
+access** application it prompts for. It asks how you recruited testers and what
+you learned — answer it with the actual feedback, not boilerplate. Expect
+another review.
+
+## Store listing assets
+
+| Asset | Spec | Status |
+|---|---|---|
+| App icon | **512 × 512**, 32-bit PNG **with** alpha | ✅ `tools/logo/store/play-icon-512.png` |
+| Feature graphic | **1024 × 500**, PNG or JPEG, **no** alpha | ✅ `tools/logo/store/play-feature-graphic-1024x500.png` |
+| Phone screenshots | **2 minimum**, 8 max. PNG or JPEG, **no alpha**. Each side 320–3840 px, and the long side no more than twice the short. 1080 × 1920 is the safe choice | Needs a device |
+| Short description | 80 characters | Not written |
+| Full description | 4000 characters | Not written |
+
+Regenerate the two images with `python3 tools/logo/mkstore.py`. Do not
+hand-edit them — they are traced from the same `paths.json` as the launcher
+icon, and a hand-made listing image is exactly how the mark drifted before.
+
+Note the specs disagree: the **icon requires an alpha channel** and the
+**feature graphic forbids one**.
+
+Tablet and Chromebook screenshots are optional while the listing does not
+claim tablet support, but Google shows a "your app is not optimised" nudge
+without them. Ignorable for a first release.
+
+**Screens worth shooting**, in listing order — the first two are what most
+people ever see:
+
+1. A player's prep page with real games loaded
+2. The Olympiad tab with a country filter applied
+3. The daily puzzle mid-solve
+4. The game viewer with the board and the eval bar
+5. The schedule
+
+Use one of the seeded sample players (Magnus, Hikaru) so no real opponent's
+name is in your store listing.
+
+## Verifying the release path
+
+`pnpm build:aab` runs on EAS, which is slow to iterate against. The same native
+release path builds locally:
+
+```bash
+cd android
+SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true \
+  ./gradlew :app:bundleRelease
+```
+
+**Both env vars are required.** Without them `sentry-cli` tries to upload
+source maps, exits 1, and fails the build at
+`createBundleReleaseJsAndAssets_SentryUpload`. `eas.json` sets them on all
+three profiles, so a cloud build never hits this — only a bare local gradle
+invocation does.
+
+The resulting `.aab` is signed with the **debug** keystore (see
+`android/app/build.gradle`), so it is a compile check only and must never be
+uploaded. R8 is off (`android.enableMinifyInReleaseBuilds` defaults to false),
+so nothing is stripped and there is no proguard risk — at the cost of size.
