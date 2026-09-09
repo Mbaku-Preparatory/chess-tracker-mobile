@@ -31,6 +31,8 @@ export interface AnalysisLine {
   play: (from: string, to: string) => boolean;
   goTo: (index: number) => void;
   clearBranch: () => void;
+  /** Back to the starting position with no branch, for when the game changes. */
+  reset: () => void;
 }
 
 export function useAnalysisLine(mainMoves: ParsedMove[]): AnalysisLine {
@@ -70,5 +72,6 @@ export function useAnalysisLine(mainMoves: ParsedMove[]): AnalysisLine {
     play,
     goTo,
     clearBranch: useCallback(() => setState(clearBranchOf), []),
+    reset: useCallback(() => setState(INITIAL), []),
   };
 }
