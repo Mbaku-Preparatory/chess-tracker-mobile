@@ -200,3 +200,32 @@ export const FEDERATIONS: Federation[] = [
   fed("ZAM", "Zambia", "ZM"),
   fed("ZIM", "Zimbabwe", "ZW"),
 ];
+
+/**
+ * Code → federation, for showing a name and flag instead of three letters.
+ *
+ * A Map rather than repeated `FEDERATIONS.find()`: the Olympiad filter renders
+ * every federation that has ever played, and a linear scan per row turns a
+ * 200-row list into 40,000 comparisons.
+ */
+const BY_CODE = new Map(FEDERATIONS.map((f) => [f.code, f]));
+
+/**
+ * The federation for a code, or a usable stand-in.
+ *
+ * The Olympiad archive spans a century, so it contains codes no current list
+ * has: nations that no longer exist (URS, YUG, TCH), and FIDE's own
+ * non-national entries like IBC for the blind association. Those must still
+ * appear in the filter and still be selectable — a country that played is a
+ * country you can search for, whether or not it survived. The code stands in
+ * for the name and the flag is dropped, which reads as "no flag known" rather
+ * than as a wrong one.
+ */
+export function federationFor(code: string): Federation {
+  return BY_CODE.get(code) ?? { code, name: code, flag: "" };
+}
+
+/** Sorted by name, so a picker reads alphabetically rather than by code. */
+export function federationsFor(codes: string[]): Federation[] {
+  return codes.map(federationFor).sort((a, b) => a.name.localeCompare(b.name));
+}

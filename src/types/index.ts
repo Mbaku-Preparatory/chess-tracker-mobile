@@ -636,6 +636,8 @@ export interface OlympiadGame {
   site: string;
   year: number | null;
   round: string;
+  /** The round a reader means: "3.31" is round 3. Null when unrecorded. */
+  round_number: number | null;
 }
 
 export interface OlympiadGameWithMoves extends OlympiadGame {

@@ -1,26 +1,33 @@
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
+import { federationFor, federationsFor } from "@/lib/federations";
 import { Screen } from "@/components/layout/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListSkeleton } from "@/components/ui/LoadingSkeleton";
 import { PageHeader } from "@/components/ui/SectionContainer";
-import { SearchInput } from "@/components/ui/SearchInput";
+import { PickerSheet, type PickerOption } from "@/components/ui/PickerSheet";
+import { MasterGameViewerModal } from "@/components/players/MasterGameViewerModal";
 import { useTheme } from "@/theme/ThemeContext";
-import type { OlympiadFilters, OlympiadGame } from "@/types";
+import type { MasterGame, OlympiadFilters, OlympiadGame } from "@/types";
 
 /**
  * The Chess Olympiad archive.
  *
- * Filtered by country and round, because that is how a team event is actually
- * navigated — "how did Kenya do in round 3" is the question, not "show me the
- * Najdorf". Openings already have their own place; this does not duplicate it.
- *
- * The filter values come from the server rather than being hardcoded, so the
- * country row only ever offers federations that actually played. A list of two
- * hundred codes where most return nothing is worse than no list.
+ * Filtered by country and round, which is how a team event is read — "how did
+ * Kenya do in round 3". Country and round are pickers because their ranges are
+ * long and known (209 federations, 21 rounds); year is typed, because its range
+ * is a century and a reader almost always has one in mind.
  */
 
 const RESULT_LABEL: Record<string, string> = {
@@ -29,85 +36,48 @@ const RESULT_LABEL: Record<string, string> = {
   "1/2-1/2": "½–½",
 };
 
-function Chip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
+function GameRow({ game, onPress, busy }: { game: OlympiadGame; onPress: () => void; busy: boolean }) {
   const t = useTheme();
+  // A dash, never a guess: TWIC-sourced rows genuinely carry no federation.
+  const badge = (code: string) => {
+    if (!code) return "—";
+    const f = federationFor(code);
+    return f.flag ? `${f.flag} ${f.code}` : f.code;
+  };
   return (
     <Pressable
       onPress={onPress}
-      style={[
-        st.chip,
-        {
-          borderColor: selected ? t.brand(600) : t.border,
-          backgroundColor: selected ? t.brand(600) : t.surface,
-        },
+      style={({ pressed }) => [
+        st.row,
+        { borderColor: t.border, backgroundColor: pressed ? t.elevated : t.surface },
       ]}
     >
-      <Text style={{ fontSize: 13, fontWeight: "600", color: selected ? "#fff" : t.textMuted }}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function FilterRow({
-  label,
-  values,
-  selected,
-  onSelect,
-}: {
-  label: string;
-  values: string[];
-  selected: string | null;
-  onSelect: (value: string | null) => void;
-}) {
-  const t = useTheme();
-  if (values.length === 0) return null;
-  return (
-    <View style={{ marginBottom: 12 }}>
-      <Text style={[st.filterLabel, { color: t.textFaint }]}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chipRow}>
-        {/* "All" is a chip rather than a clear button so that clearing one
-            filter never looks like clearing the lot. */}
-        <Chip label="All" selected={selected === null} onPress={() => onSelect(null)} />
-        {values.map((v) => (
-          <Chip key={v} label={v} selected={selected === v} onPress={() => onSelect(v)} />
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
-function GameRow({ game }: { game: OlympiadGame }) {
-  const t = useTheme();
-  // A dash, never a guess: TWIC-sourced rows genuinely have no federation.
-  const fed = (code: string) => (code ? code : "—");
-  return (
-    <View style={[st.row, { borderColor: t.border, backgroundColor: t.surface }]}>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={[st.players, { color: t.text }]}>
-          {game.white} <Text style={{ color: t.textFaint }}>({fed(game.white_federation)})</Text>
+          {game.white} <Text style={{ color: t.textFaint }}>{badge(game.white_federation)}</Text>
         </Text>
         <Text numberOfLines={1} style={[st.players, { color: t.text }]}>
-          {game.black} <Text style={{ color: t.textFaint }}>({fed(game.black_federation)})</Text>
+          {game.black} <Text style={{ color: t.textFaint }}>{badge(game.black_federation)}</Text>
         </Text>
         <Text numberOfLines={1} style={[st.meta, { color: t.textMuted }]}>
-          {[game.year, game.round ? `Round ${game.round}` : null, game.eco, game.opening_name]
+          {[
+            game.year,
+            game.round_number ? `Round ${game.round_number}` : null,
+            game.eco,
+            game.opening_name,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </Text>
       </View>
-      <Text style={[st.result, { color: t.textMuted }]}>
-        {RESULT_LABEL[game.result] ?? game.result}
-      </Text>
-    </View>
+      {busy ? (
+        <ActivityIndicator size="small" color={t.brand(600)} />
+      ) : (
+        <Text style={[st.result, { color: t.textMuted }]}>
+          {RESULT_LABEL[game.result] ?? game.result}
+        </Text>
+      )}
+    </Pressable>
   );
 }
 
@@ -122,10 +92,13 @@ export function OlympiadScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [year, setYear] = useState<number | null>(null);
-  const [federation, setFederation] = useState<string | null>(null);
-  const [round, setRound] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [federation, setFederation] = useState("");
+  const [round, setRound] = useState("");
+  const [yearInput, setYearInput] = useState("");
+  const [year, setYear] = useState("");
+
+  const [openGame, setOpenGame] = useState<MasterGame | null>(null);
+  const [openingId, setOpeningId] = useState<number | null>(null);
 
   useEffect(() => {
     api
@@ -134,12 +107,25 @@ export function OlympiadScreen() {
       .catch((err) => setError(userMessage(err, "Couldn't load the Olympiad archive.")));
   }, []);
 
+  // Typing a year debounces: firing per keystroke makes "1978" four requests,
+  // three of them for years that do not exist.
+  useEffect(() => {
+    const timer = setTimeout(() => setYear(yearInput.trim()), 400);
+    return () => clearTimeout(timer);
+  }, [yearInput]);
+
   const load = useCallback(
     async (nextPage: number) => {
-      nextPage === 1 ? setLoading(true) : setLoadingMore(true);
+      if (nextPage === 1) setLoading(true);
+      else setLoadingMore(true);
       setError(null);
       try {
-        const body = await api.getOlympiadGames({ year, federation, round, search, page: nextPage });
+        const body = await api.getOlympiadGames({
+          year: /^\d{4}$/.test(year) ? Number(year) : null,
+          federation: federation || null,
+          round: round || null,
+          page: nextPage,
+        });
         setGames((prev) => (nextPage === 1 ? body.results : [...prev, ...body.results]));
         setCount(body.count);
         setHasMore(body.has_more);
@@ -151,17 +137,39 @@ export function OlympiadScreen() {
         setLoadingMore(false);
       }
     },
-    [year, federation, round, search]
+    [year, federation, round]
   );
 
-  // Any filter change resets to the first page. Keeping the page number across
-  // a change lands the reader on page 4 of a three-page result and looks empty.
   useEffect(() => {
     load(1);
   }, [load]);
 
-  const years = (filters?.events ?? []).map((e) => String(e.year));
-  const uniqueYears = Array.from(new Set(years));
+  const countryOptions: PickerOption[] = useMemo(
+    () =>
+      federationsFor(filters?.federations ?? []).map((f) => ({
+        value: f.code,
+        label: f.name,
+        prefix: f.flag,
+      })),
+    [filters]
+  );
+
+  const roundOptions: PickerOption[] = useMemo(
+    () => (filters?.rounds ?? []).map((r) => ({ value: String(r), label: `Round ${r}` })),
+    [filters]
+  );
+
+  async function openGameViewer(game: OlympiadGame) {
+    setOpeningId(game.id);
+    try {
+      const full = await api.getOlympiadGameMoves(game.id);
+      setOpenGame({ ...full, result: full.result as MasterGame["result"] });
+    } catch (err) {
+      setError(userMessage(err, "Couldn't open that game."));
+    } finally {
+      setOpeningId(null);
+    }
+  }
 
   return (
     <Screen>
@@ -169,45 +177,57 @@ export function OlympiadScreen() {
         title="Olympiad"
         subtitle={
           filters
-            ? `${filters.total_games.toLocaleString()} games from ${filters.events.length} events`
+            ? `${filters.total_games.toLocaleString()} games · 1924–2024`
             : "Chess Olympiad archive"
         }
       />
 
-      <SearchInput
-        placeholder="Search a player…"
-        onSearch={setSearch}
-        style={{ marginBottom: 14 }}
-      />
+      <View style={{ flexDirection: "row", gap: 10, marginBottom: 8 }}>
+        <PickerSheet
+          label="COUNTRY"
+          value={federation}
+          options={countryOptions}
+          placeholder="All countries"
+          onChange={setFederation}
+          searchable
+        />
+        <PickerSheet
+          label="ROUND"
+          value={round}
+          options={roundOptions}
+          placeholder="All rounds"
+          onChange={setRound}
+        />
+        <View style={{ width: 78 }}>
+          <Text style={[st.label, { color: t.textFaint }]}>YEAR</Text>
+          <TextInput
+            value={yearInput}
+            onChangeText={(v) => setYearInput(v.replace(/\D/g, "").slice(0, 4))}
+            placeholder="Any"
+            placeholderTextColor={t.textFaint}
+            keyboardType="number-pad"
+            style={[st.yearField, { borderColor: t.border, backgroundColor: t.surface, color: t.text }]}
+          />
+        </View>
+      </View>
 
-      <FilterRow
-        label="COUNTRY"
-        values={filters?.federations ?? []}
-        selected={federation}
-        onSelect={setFederation}
-      />
-      <FilterRow label="ROUND" values={filters?.rounds ?? []} selected={round} onSelect={setRound} />
-      <FilterRow
-        label="YEAR"
-        values={uniqueYears}
-        selected={year === null ? null : String(year)}
-        onSelect={(v) => setYear(v === null ? null : Number(v))}
-      />
-
-      {error && <Text style={{ color: t.danger, marginBottom: 12 }}>{error}</Text>}
+      {error && <Text style={{ color: t.danger, marginBottom: 10 }}>{error}</Text>}
 
       {loading ? (
         <ListSkeleton />
       ) : games.length === 0 ? (
-        <EmptyState
-          title="No games match"
-          description="Try a different country or round."
-        />
+        <EmptyState title="No games match" description="Try a different country, round or year." />
       ) : (
         <FlatList
           data={games}
           keyExtractor={(g) => String(g.id)}
-          renderItem={({ item }) => <GameRow game={item} />}
+          renderItem={({ item }) => (
+            <GameRow
+              game={item}
+              busy={openingId === item.id}
+              onPress={() => openGameViewer(item)}
+            />
+          )}
           ListHeaderComponent={
             <Text style={[st.count, { color: t.textFaint }]}>
               {count.toLocaleString()} game{count === 1 ? "" : "s"}
@@ -218,18 +238,27 @@ export function OlympiadScreen() {
             if (hasMore && !loadingMore) load(page + 1);
           }}
           ListFooterComponent={
-            loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} color={t.brand(600)} /> : null
+            loadingMore ? (
+              <ActivityIndicator style={{ marginVertical: 16 }} color={t.brand(600)} />
+            ) : null
           }
         />
       )}
+
+      {openGame && <MasterGameViewerModal game={openGame} onClose={() => setOpenGame(null)} />}
     </Screen>
   );
 }
 
 const st = StyleSheet.create({
-  filterLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.6, marginBottom: 6 },
-  chipRow: { gap: 8, paddingRight: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
+  label: { fontSize: 11, fontWeight: "700", letterSpacing: 0.6, marginBottom: 4 },
+  yearField: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    fontSize: 14,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
