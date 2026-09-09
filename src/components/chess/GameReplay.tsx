@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -21,7 +21,7 @@ import { api } from "@/lib/api";
 import { useStockfish } from "@/hooks/useStockfish";
 import { useTheme } from "@/theme/ThemeContext";
 import { useAnalysisLine } from "./useAnalysisLine";
-import { ChessBoard } from "./ChessBoard";
+import Chessboard, { type ChessboardRef } from "react-native-chessboard";
 import { EvalBar } from "@/components/ui/EvalBar";
 
 export interface ParsedMove {
@@ -89,11 +89,6 @@ export interface SidePlayer {
 export type SideScores = Record<"white" | "black", string | null>;
 
 const NO_SCORES: SideScores = { white: null, black: null };
-
-// One shared empty array. A literal would be a new identity every render and
-// would defeat ChessBoard's memo whenever no piece is picked up — that is,
-// almost always.
-const EMPTY_TARGETS: string[] = [];
 
 /**
  * Each side's score from the PGN's Result tag.
@@ -203,7 +198,7 @@ export function GameReplay({
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [analysisLoading, setAnalysisLoading] = useState<"lichess" | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const boardRef = useRef<ChessboardRef>(null);
 
   const { moves: gameMoves, players: named, result: resultTag } = useMemo(() => parsePgn(pgn), [pgn]);
 
@@ -212,46 +207,40 @@ export function GameReplay({
   const line = useAnalysisLine(gameMoves);
   const { moves, index: currentIndex, fen: currentFen, goTo } = line;
 
-  // Tap a piece to pick it up, tap again to put it down, tap a legal square to
-  // move. Tapping another of your own pieces switches to it rather than
-  // failing, which is what people expect and costs nothing.
-  const handleSquare = useCallback(
-    (square: string) => {
-      if (selected === square) {
-        setSelected(null);
-        return;
-      }
-      if (selected && line.play(selected, square)) {
-        setSelected(null);
-        return;
-      }
-      setSelected(line.legalTargets(square).length > 0 ? square : null);
-    },
-    // The individual callbacks, not the container: legalTargets is keyed on
-    // the position and play on the move state, so this survives the extra
-    // renders the eval causes.
-    [selected, line.play, line.legalTargets]
-  );
   const engine = useStockfish(currentFen, !loading && moves.length >= 0);
 
-  // Memoised because ChessBoard is: a fresh array literal every render makes
-  // its memo a no-op, which is both easy to do by accident and invisible.
-  const highlights = useMemo(() => {
-    const move = currentIndex >= 0 ? moves[currentIndex] : null;
-    return move
-      ? [
-          { square: move.from, color: "rgba(255,214,10,0.4)" },
-          { square: move.to, color: "rgba(255,214,10,0.55)" },
-        ]
-      : [];
-  }, [currentIndex, moves]);
+  // The board keeps its own position — its `fen` prop is only a starting one —
+  // so ours has to be pushed in whenever it changes. Two things make that
+  // bearable rather than ugly: `lastMove` gives the yellow highlight natively,
+  // and `slide` animates a piece from one square to another, so stepping
+  // through a game still moves rather than cutting.
+  //
+  // A move made *on* the board must not be pushed back at it. The board is
+  // already showing it, and resetting there would interrupt the animation of
+  // the move just played. The flag is set in onMove and consumed by the effect.
+  const cameFromBoard = useRef(false);
+  const previousIndex = useRef(currentIndex);
 
-  // Same, and this one also stops a Chess position being constructed on every
-  // render for as long as a piece is picked up.
-  const targets = useMemo(
-    () => (selected ? line.legalTargets(selected) : EMPTY_TARGETS),
-    [selected, line.legalTargets]
-  );
+  useEffect(() => {
+    const step = currentIndex - previousIndex.current;
+    previousIndex.current = currentIndex;
+
+    if (cameFromBoard.current) {
+      cameFromBoard.current = false;
+      return;
+    }
+
+    const move = currentIndex >= 0 ? moves[currentIndex] : null;
+    const lastMove = move ? { from: move.from as never, to: move.to as never } : null;
+    boardRef.current?.resetBoard(currentFen, {
+      // Only a single step forward is a move to animate. A jump to the start,
+      // the end, or a tapped move in the list is not a piece travelling — it
+      // is a different position, and sliding to it would be a lie about what
+      // happened.
+      slide: step === 1 && move ? { from: move.from as never, to: move.to as never } : undefined,
+      lastMove,
+    });
+  }, [currentFen, currentIndex, moves]);
 
   async function handleDownload() {
     if (!pgn) return;
@@ -332,15 +321,20 @@ export function GameReplay({
                   <ActivityIndicator color={t.brand(600)} />
                 </View>
               ) : (
-                <ChessBoard
+                <Chessboard
+                  ref={boardRef}
                   fen={currentFen}
-                  orientation={orientation}
-                  size={boardSize}
-                  highlights={highlights}
-                  onSquarePress={handleSquare}
-                  selected={selected}
-                  targets={targets}
-                  radius={0}
+                  flipped={orientation === "black"}
+                  boardSize={boardSize}
+                  withLetters={false}
+                  withNumbers={false}
+                  colors={{ black: "#4a7c59", white: "#f0d9b5" }}
+                  onMove={({ move }) => {
+                    if (!move) return;
+                    // Ours is the record; the board has already drawn it.
+                    cameFromBoard.current = true;
+                    line.play(move.from, move.to);
+                  }}
                 />
               )}
               <View style={{ paddingHorizontal: 12 }}>
@@ -416,10 +410,7 @@ export function GameReplay({
 
             {line.branch && (
               <Pressable
-                onPress={() => {
-                  line.clearBranch();
-                  setSelected(null);
-                }}
+                onPress={line.clearBranch}
                 style={[st.backToGame, { borderColor: t.brand(600) }]}
               >
                 <Ionicons name="return-up-back" size={14} color={t.brand(600)} />

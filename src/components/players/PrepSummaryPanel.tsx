@@ -8,7 +8,7 @@ import { useTheme } from "@/theme/ThemeContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ColorBadge, ResultBadge } from "@/components/ui/Badge";
-import { ChessBoard } from "@/components/chess/ChessBoard";
+import Chessboard, { type ChessboardRef } from "react-native-chessboard";
 import { PgnViewerModal } from "./PgnViewerModal";
 import type { Game, PrepSummary, PrepTree, PrepTreeNode } from "@/types";
 
@@ -94,6 +94,11 @@ function InteractivePrepTree({
 }) {
   const t = useTheme();
   const [path, setPath] = useState<string[]>([]);
+  // `fen` is only the board's starting position, so every step through the
+  // tree has to be pushed in. No slide: moving up or down a tree is a jump to
+  // a different line, not a piece travelling across the board.
+  const boardRef = useRef<ChessboardRef>(null);
+
   const [games, setGames] = useState<Game[]>([]);
   const [gamesTotal, setGamesTotal] = useState(0);
   const [gamesPage, setGamesPage] = useState(1);
@@ -103,6 +108,10 @@ function InteractivePrepTree({
   const fetchRef = useRef(0);
 
   const fen = computePosition(path);
+
+  useEffect(() => {
+    boardRef.current?.resetBoard(fen);
+  }, [fen]);
   const nextMoves = findChildren(tree, path);
   const maxPct = nextMoves.length > 0 ? nextMoves[0].pct : 0;
 
@@ -154,7 +163,18 @@ function InteractivePrepTree({
       </ScrollView>
 
       <View style={{ alignItems: "center", marginBottom: 16 }}>
-        <ChessBoard fen={fen} orientation={orientation} size={260} />
+        <Chessboard
+          ref={boardRef}
+          fen={fen}
+          flipped={orientation === "black"}
+          boardSize={260}
+          // Read-only: this walks an opening tree, and the moves come from the
+          // list beside it rather than from dragging pieces.
+          gestureEnabled={false}
+          withLetters={false}
+          withNumbers={false}
+          colors={{ black: "#4a7c59", white: "#f0d9b5" }}
+        />
       </View>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
