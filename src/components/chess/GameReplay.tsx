@@ -430,32 +430,37 @@ export function GameReplay({
             )}
           </View>
 
-          {pgn && (
-            <View style={[st.actionsRow, { borderColor: t.border }]}>
-              <Pressable onPress={handleDownload} style={[st.actionIconBtn, { borderColor: t.border }]}>
-                <Ionicons name="download-outline" size={15} color={t.textMuted} />
-              </Pressable>
-              <Pressable onPress={() => handleAnalysis("chesscom")} style={[st.actionBtn, { borderColor: t.border }]}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted }}>Chess.com</Text>
-              </Pressable>
-              <Pressable onPress={() => handleAnalysis("lichess")} disabled={analysisLoading === "lichess"} style={[st.actionBtn, { borderColor: t.border }]}>
-                {analysisLoading === "lichess" ? (
-                  <ActivityIndicator size="small" color={t.textMuted} />
-                ) : (
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted }}>Lichess</Text>
-                )}
-              </Pressable>
-              {/* share-social, not share: the three linked nodes are the glyph
-                  people read as "share", where Ionicons' "share" is a box with
-                  an arrow that reads as "open elsewhere". No label — the icon
-                  carries it, and the row is tight with four controls. */}
-              <Pressable onPress={handleShare} style={[st.actionIconBtn, { borderColor: t.border }]}>
-                <Ionicons name="share-social-outline" size={15} color={t.textMuted} />
-              </Pressable>
-            </View>
-          )}
         </ScrollView>
 
+        {/* Outside the ScrollView: these are the things you reach for while
+          reading a game — sending it to an engine, saving it, passing it on —
+          and scrolling to the end of a long game to find them made them feel
+          like a footnote. Pinned above the move controls, which were already
+          fixed for the same reason. */}
+        {pgn && (
+          <View style={[st.actionsRow, { borderColor: t.border }]}>
+            <Pressable onPress={handleDownload} style={[st.actionIconBtn, { borderColor: t.border }]}>
+              <Ionicons name="download-outline" size={15} color={t.textMuted} />
+            </Pressable>
+            <Pressable onPress={() => handleAnalysis("chesscom")} style={[st.actionBtn, { borderColor: t.border }]}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted }}>Chess.com</Text>
+            </Pressable>
+            <Pressable onPress={() => handleAnalysis("lichess")} disabled={analysisLoading === "lichess"} style={[st.actionBtn, { borderColor: t.border }]}>
+              {analysisLoading === "lichess" ? (
+                <ActivityIndicator size="small" color={t.textMuted} />
+              ) : (
+                <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted }}>Lichess</Text>
+              )}
+            </Pressable>
+            {/* share-social, not share: the three linked nodes are the glyph
+                people read as "share", where Ionicons' "share" is a box with
+                an arrow that reads as "open elsewhere". No label — the icon
+                carries it, and the row is tight with four controls. */}
+            <Pressable onPress={handleShare} style={[st.actionIconBtn, { borderColor: t.border }]}>
+              <Ionicons name="share-social-outline" size={15} color={t.textMuted} />
+            </Pressable>
+          </View>
+        )}
         <View style={[st.navRow, { borderColor: t.border, paddingBottom: 12 + insets.bottom }]}>
           <NavBtn icon="play-skip-back" disabled={currentIndex === -1} onPress={() => goTo(-1)} color={t.textMuted} />
           <NavBtn icon="chevron-back" disabled={currentIndex === -1} onPress={() => goTo(currentIndex - 1)} color={t.textMuted} />
@@ -488,7 +493,9 @@ const st = StyleSheet.create({
   },
   moveListScroll: { maxHeight: 140 },
   moveChip: { borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, marginRight: 4 },
-  actionsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, justifyContent: "flex-end" },
+  // Centred, not right-aligned: it sits directly above the move controls now,
+  // and two pinned bars disagreeing about their alignment reads as a mistake.
+  actionsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
   actionIconBtn: { height: 30, width: 30, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 10, height: 30 },
   navRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
