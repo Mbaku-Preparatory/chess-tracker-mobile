@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,9 +10,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import Chessboard, { type ChessboardRef } from "react-native-chessboard";
+
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
-import { ChessBoard } from "@/components/chess/ChessBoard";
 import { usePuzzleEntry } from "@/components/chess/puzzleEntry";
 import { Screen } from "@/components/layout/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -103,23 +104,30 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: (p: Puzzl
   const tileWidth = (boardSize - 4 * 6) / puzzle.solution_length;
 
   const entry = usePuzzleEntry(puzzle.fen, puzzle.solution_length);
-  const [selected, setSelected] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const boardRef = useRef<ChessboardRef>(null);
 
-  const handleSquare = useCallback(
-    (square: string) => {
-      if (selected === square) return setSelected(null);
-      if (selected && entry.play(selected, square)) return setSelected(null);
-      setSelected(entry.legalTargets(square).length > 0 ? square : null);
-    },
-    [selected, entry]
-  );
+  // The board owns its own position — `fen` is only its starting one — so it
+  // has to be told when ours diverges. That is the price of this library: our
+  // state is the record, and the board is pushed at rather than rendered from.
+  //
+  // Only when the entry goes *backwards*, though. After a drag the two already
+  // agree, and resetting there would fight the animation the move just played
+  // and throw away the board's own history mid-gesture.
+  const syncedCount = useRef(0);
+  useEffect(() => {
+    if (entry.moves.length < syncedCount.current) {
+      boardRef.current?.resetBoard(entry.fen || puzzle.fen);
+    }
+    syncedCount.current = entry.moves.length;
+  }, [entry.moves.length, entry.fen, puzzle.fen]);
 
-  const targets = useMemo(
-    () => (selected ? entry.legalTargets(selected) : []),
-    [selected, entry]
-  );
+  // A different puzzle is a different game; the board has to start over.
+  useEffect(() => {
+    boardRef.current?.resetBoard(puzzle.fen);
+    syncedCount.current = 0;
+  }, [puzzle.id, puzzle.fen]);
 
   async function submit() {
     setSubmitting(true);
@@ -127,7 +135,6 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: (p: Puzzl
     try {
       const next = await api.guessPuzzle(puzzle.id, entry.moves);
       entry.clear();
-      setSelected(null);
       onSolved(next);
     } catch (err) {
       setError(userMessage(err, "Couldn't submit that guess."));
@@ -162,13 +169,21 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: (p: Puzzl
       </View>
 
       <View style={{ alignItems: "center" }}>
-        <ChessBoard
-          fen={entry.fen || puzzle.fen}
-          orientation={puzzle.side_to_move}
-          size={boardSize}
-          onSquarePress={puzzle.finished ? undefined : handleSquare}
-          selected={selected}
-          targets={targets}
+        <Chessboard
+          ref={boardRef}
+          fen={puzzle.fen}
+          flipped={puzzle.side_to_move === "black"}
+          boardSize={boardSize}
+          gestureEnabled={!puzzle.finished}
+          withLetters={false}
+          withNumbers={false}
+          colors={{ black: "#4a7c59", white: "#f0d9b5" }}
+          // The board validates the move and tells us afterwards; our own
+          // entry hook stays the record of what has been guessed, because it
+          // is what the submit sends and what the tiles read.
+          onMove={({ move }) => {
+            if (move) entry.play(move.from, move.to);
+          }}
         />
       </View>
 
@@ -192,6 +207,9 @@ function PuzzleBoard({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: (p: Puzzl
       {!puzzle.finished && (
         <View style={{ flexDirection: "row", gap: 10, justifyContent: "center" }}>
           <Pressable
+            // Only ours. The effect above notices the entry shrinking and
+            // resets the board to match, so undoing on both would step back
+            // twice.
             onPress={entry.undo}
             disabled={entry.moves.length === 0}
             style={[st.btn, { borderColor: t.border, opacity: entry.moves.length ? 1 : 0.4 }]}

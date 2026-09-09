@@ -46,7 +46,10 @@
           "color": "#7CAC42"
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-font",
+      "expo-secure-store",
+      "expo-sharing"
     ],
     "extra": {
       "eas": {
