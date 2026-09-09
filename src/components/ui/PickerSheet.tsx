@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -38,6 +39,11 @@ export function PickerSheet({
   searchable?: boolean;
 }) {
   const t = useTheme();
+  // A Modal renders outside the screen's SafeAreaView, so it gets no inset of
+  // its own. Without this the sheet runs under Android's navigation bar and
+  // its last row sits behind the back and home buttons — unreachable, and on
+  // a gesture-nav device the swipe area eats the tap as well.
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -72,7 +78,19 @@ export function PickerSheet({
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <Pressable style={st.backdrop} onPress={() => setOpen(false)} />
-        <View style={[st.sheet, { backgroundColor: t.bg, borderColor: t.border }]}>
+        <View
+          style={[
+            st.sheet,
+            {
+              backgroundColor: t.bg,
+              borderColor: t.border,
+              // Padding, not margin: the sheet is capped at 70% of the screen,
+              // so the bar's height has to come out of that rather than push
+              // the sheet taller than its cap.
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
           <View style={st.sheetHeader}>
             <Text style={[st.sheetTitle, { color: t.text }]}>{label}</Text>
             <Pressable onPress={() => setOpen(false)} hitSlop={10}>
@@ -97,6 +115,7 @@ export function PickerSheet({
             // empty string with nothing else, so the index keeps the key
             // total even if a source ever repeats a code.
             keyExtractor={(o, i) => `${o.value}-${i}`}
+            contentContainerStyle={{ paddingBottom: 8 }}
             renderItem={({ item }) => {
               const active = item.value === value;
               return (

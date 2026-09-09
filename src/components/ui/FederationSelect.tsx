@@ -2,10 +2,16 @@ import { useMemo, useState } from "react";
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { FEDERATIONS } from "@/lib/federations";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useTheme } from "@/theme/ThemeContext";
 
 export function FederationSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const t = useTheme();
+  // A Modal renders outside the screen's SafeAreaView and gets no inset of its
+  // own, so a fixed padding leaves the last row under Android's navigation
+  // bar on any device whose bar is taller than the guess.
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -29,7 +35,7 @@ export function FederationSelect({ value, onChange }: { value: string; onChange:
       </Pressable>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: t.bg, paddingTop: 60 }}>
+        <View style={{ flex: 1, backgroundColor: t.bg, paddingTop: 24 + insets.top }}>
           <View style={{ paddingHorizontal: 16, gap: 10 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ fontSize: 18, fontWeight: "700", color: t.text }}>Select federation</Text>
@@ -55,7 +61,7 @@ export function FederationSelect({ value, onChange }: { value: string; onChange:
             data={filtered}
             keyExtractor={(f) => f.code}
             style={{ marginTop: 10 }}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 + insets.bottom }}
             renderItem={({ item }) => (
               <Pressable
                 onPress={() => { onChange(item.code); setOpen(false); setQuery(""); }}
