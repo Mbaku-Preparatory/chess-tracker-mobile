@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,252 +15,148 @@ import Chessboard, { type ChessboardRef } from "react-native-chessboard";
 
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
-import { usePuzzleEntry } from "@/components/chess/puzzleEntry";
+import { usePuzzleSolve } from "@/components/chess/puzzleSolve";
 import { Screen } from "@/components/layout/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/SectionContainer";
 import { useTheme } from "@/theme/ThemeContext";
-import type { Puzzle, PuzzleVerdict } from "@/types";
+import type { Puzzle } from "@/types";
 
 /**
- * The daily puzzle: guess the five moves actually played from a real position.
+ * The daily puzzle: one position, and the move that wins it.
  *
- * Moves are entered on the board rather than typed. It is chess and the board
- * is right there, and typing SAN would make the game partly a spelling test.
+ * Play your move on the board. The opponent answers, and you play the next
+ * one — usually two or three in all. A wrong move ends it, which is what makes
+ * getting it right mean anything.
  *
- * Nothing is scored here. The attempt goes to the server and comes back marked
- * — the solution is the whole game, so a client that could mark it would have
- * been given it.
+ * Nothing is checked here. Each move goes to the server and comes back marked,
+ * because the line is the whole point and a client that could check its own
+ * moves would have been handed it.
  */
 
-const VERDICT_COLOUR: Record<PuzzleVerdict, string> = {
-  correct: "#4a7c59",
-  misplaced: "#c9a227",
-  piece: "#3f6fa8",
-  wrong: "#6b7280",
-};
-
-const VERDICT_MEANING: { verdict: PuzzleVerdict; label: string }[] = [
-  { verdict: "correct", label: "Right move, right place" },
-  { verdict: "misplaced", label: "In the line, wrong place" },
-  { verdict: "piece", label: "Right piece, wrong move" },
-  { verdict: "wrong", label: "Not in the line" },
-];
-
-function Tile({
-  san,
-  verdict,
-  width,
-}: {
-  san: string | null;
-  verdict?: PuzzleVerdict;
-  width: number;
-}) {
-  const t = useTheme();
-  const filled = !!verdict;
-  return (
-    <View
-      style={[
-        st.tile,
-        {
-          width,
-          backgroundColor: filled ? VERDICT_COLOUR[verdict] : t.surface,
-          borderColor: filled ? "transparent" : t.border,
-        },
-      ]}
-    >
-      <Text
-        numberOfLines={1}
-        style={{
-          fontSize: 12,
-          fontWeight: "700",
-          fontFamily: "monospace",
-          color: filled ? "#fff" : t.text,
-        }}
-      >
-        {san ?? ""}
-      </Text>
-    </View>
-  );
+/** Lichess's theme tags are camelCase; nobody wants to read "mateIn2". */
+function prettyTheme(tag: string): string {
+  const spaced = tag.replace(/([a-z])([A-Z0-9])/g, "$1 $2").toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-function Legend() {
-  const t = useTheme();
-  return (
-    <View style={st.legend}>
-      {VERDICT_MEANING.map(({ verdict, label }) => (
-        <View key={verdict} style={st.legendItem}>
-          <View style={[st.legendSwatch, { backgroundColor: VERDICT_COLOUR[verdict] }]} />
-          <Text style={{ fontSize: 11, color: t.textMuted }}>{label}</Text>
-        </View>
-      ))}
-    </View>
-  );
+/**
+ * What to tell the player right now.
+ *
+ * Deliberately never says how many moves are left in a way that gives the line
+ * away — "find 2 moves" is the shape of the puzzle, not its content, and
+ * Lichess shows the same thing.
+ */
+function statusLine(puzzle: Puzzle, status: string, found: number) {
+  if (status === "solved") return { text: "Solved", tone: "good" as const };
+  if (status === "failed") return { text: "Not the move", tone: "bad" as const };
+  if (found > 0) return { text: "Right — keep going", tone: "good" as const };
+  const side = puzzle.side_to_move === "white" ? "White" : "Black";
+  const count = puzzle.moves_to_find === 1 ? "the move" : `${puzzle.moves_to_find} moves`;
+  return { text: `${side} to play · find ${count}`, tone: "plain" as const };
 }
 
-function PuzzleBoard({ puzzle, onSolved }: { puzzle: Puzzle; onSolved: (p: Puzzle) => void }) {
+function PuzzleBoard({ puzzle, onChanged }: { puzzle: Puzzle; onChanged: (p: Puzzle) => void }) {
   const t = useTheme();
   const { width } = useWindowDimensions();
-  const boardSize = Math.min(width - 32, 380);
-  const tileWidth = (boardSize - 4 * 6) / puzzle.solution_length;
+  const boardSize = Math.min(width - 24, 420);
 
-  const entry = usePuzzleEntry(puzzle.fen, puzzle.solution_length);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const solve = usePuzzleSolve(puzzle, api.playPuzzleMove, onChanged);
   const boardRef = useRef<ChessboardRef>(null);
 
   // The board owns its own position — `fen` is only its starting one — so it
-  // has to be told when ours diverges. That is the price of this library: our
-  // state is the record, and the board is pushed at rather than rendered from.
+  // has to be told whenever ours moves without it.
   //
-  // Only when the entry goes *backwards*, though. After a drag the two already
-  // agree, and resetting there would fight the animation the move just played
-  // and throw away the board's own history mid-gesture.
-  const syncedCount = useRef(0);
+  // Which is most of the time: the opponent's reply and the take-back after a
+  // wrong move are both ours alone. The exception is the player's own drag,
+  // where the board has already animated the move and resetting would fight
+  // the gesture that caused it. This ref marks that one case.
+  const cameFromBoard = useRef(false);
   useEffect(() => {
-    if (entry.moves.length < syncedCount.current) {
-      boardRef.current?.resetBoard(entry.fen || puzzle.fen);
+    if (cameFromBoard.current) {
+      cameFromBoard.current = false;
+      return;
     }
-    syncedCount.current = entry.moves.length;
-  }, [entry.moves.length, entry.fen, puzzle.fen]);
+    boardRef.current?.resetBoard(solve.fen);
+  }, [solve.fen]);
 
-  // A different puzzle is a different game; the board has to start over.
-  useEffect(() => {
-    boardRef.current?.resetBoard(puzzle.fen);
-    syncedCount.current = 0;
-  }, [puzzle.id, puzzle.fen]);
-
-  async function submit() {
-    setSubmitting(true);
-    setError(null);
-    try {
-      const next = await api.guessPuzzle(puzzle.id, entry.moves);
-      entry.clear();
-      onSolved(next);
-    } catch (err) {
-      setError(userMessage(err, "Couldn't submit that guess."));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  const rows = Array.from({ length: puzzle.max_attempts }, (_, row) => {
-    if (row < puzzle.guesses.length) {
-      return { moves: puzzle.guesses[row], verdicts: puzzle.results[row] };
-    }
-    if (row === puzzle.guesses.length && !puzzle.finished) {
-      return { moves: entry.moves, verdicts: null };
-    }
-    return { moves: [], verdicts: null };
-  });
+  const status = statusLine(puzzle, solve.status, solve.found);
+  const toneColour =
+    status.tone === "good" ? t.brand(600) : status.tone === "bad" ? t.danger : t.text;
 
   return (
-    <View style={{ gap: 14 }}>
-      <View style={[st.prompt, { borderColor: t.border, backgroundColor: t.surface }]}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: t.text }}>
-          {puzzle.side_to_move === "white" ? "White" : "Black"} to play, move {puzzle.move_number}
-        </Text>
-        <Text style={{ fontSize: 12, color: t.textMuted, marginTop: 2 }}>
-          {puzzle.white} vs {puzzle.black}
-          {puzzle.year ? ` · ${puzzle.year}` : ""}
-        </Text>
-        <Text style={{ fontSize: 12, color: t.textFaint, marginTop: 4 }}>
-          Play the {puzzle.solution_length} moves you think came next.
-        </Text>
-      </View>
-
+    <View style={{ gap: 12 }}>
       <View style={{ alignItems: "center" }}>
         <Chessboard
           ref={boardRef}
           fen={puzzle.fen}
+          // Your pieces at the bottom. Solving a tactic from the other side of
+          // the board is a different and much worse puzzle.
           flipped={puzzle.side_to_move === "black"}
           boardSize={boardSize}
-          gestureEnabled={!puzzle.finished}
+          gestureEnabled={solve.status === "playing"}
           withLetters={false}
           withNumbers={false}
           colors={{ black: "#4a7c59", white: "#f0d9b5" }}
-          // The board validates the move and tells us afterwards; our own
-          // entry hook stays the record of what has been guessed, because it
-          // is what the submit sends and what the tiles read.
           onMove={({ move }) => {
-            if (move) entry.play(move.from, move.to);
+            if (!move) return;
+            cameFromBoard.current = true;
+            setError(null);
+            solve.play(move.from, move.to);
           }}
         />
       </View>
 
-      <View style={{ gap: 6 }}>
-        {rows.map((row, i) => (
-          <View key={i} style={{ flexDirection: "row", gap: 6, justifyContent: "center" }}>
-            {Array.from({ length: puzzle.solution_length }, (_, col) => (
-              <Tile
-                key={col}
-                san={row.moves[col] ?? null}
-                verdict={row.verdicts?.[col]}
-                width={tileWidth}
-              />
-            ))}
-          </View>
-        ))}
+      <View style={[st.status, { borderColor: t.border, backgroundColor: t.surface }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: "800", color: toneColour }}>{status.text}</Text>
+          <Text style={{ fontSize: 12, color: t.textMuted, marginTop: 2 }}>
+            Move {puzzle.move_number}
+            {puzzle.rating ? ` · rated ${puzzle.rating}` : ""}
+            {solve.status === "playing" && puzzle.moves_to_find > 1
+              ? ` · ${solve.found}/${puzzle.moves_to_find} found`
+              : ""}
+          </Text>
+        </View>
+        {solve.status === "checking" && <ActivityIndicator size="small" color={t.brand(600)} />}
       </View>
 
       {error && <Text style={{ color: t.danger, fontSize: 12, textAlign: "center" }}>{error}</Text>}
 
-      {!puzzle.finished && (
-        <View style={{ flexDirection: "row", gap: 10, justifyContent: "center" }}>
-          <Pressable
-            // Only ours. The effect above notices the entry shrinking and
-            // resets the board to match, so undoing on both would step back
-            // twice.
-            onPress={entry.undo}
-            disabled={entry.moves.length === 0}
-            style={[st.btn, { borderColor: t.border, opacity: entry.moves.length ? 1 : 0.4 }]}
-          >
-            <Ionicons name="arrow-undo-outline" size={15} color={t.textMuted} />
-            <Text style={{ fontSize: 12, fontWeight: "700", color: t.textMuted }}>Undo</Text>
-          </Pressable>
-          <Pressable
-            onPress={submit}
-            disabled={!entry.complete || submitting}
-            style={[
-              st.btn,
-              {
-                borderColor: t.brand(600),
-                backgroundColor: entry.complete ? t.brand(600) : "transparent",
-                opacity: entry.complete && !submitting ? 1 : 0.5,
-              },
-            ]}
-          >
-            {submitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: "700",
-                  color: entry.complete ? "#fff" : t.brand(600),
-                }}
-              >
-                Submit ({puzzle.max_attempts - puzzle.attempts_used} left)
-              </Text>
-            )}
-          </Pressable>
-        </View>
-      )}
-
       {puzzle.finished && (
-        <View style={[st.outcome, { borderColor: puzzle.solved ? t.brand(600) : t.border }]}>
-          <Text style={{ fontSize: 13, fontWeight: "800", color: puzzle.solved ? t.brand(600) : t.text }}>
-            {puzzle.solved ? "Solved" : "Out of guesses"}
-          </Text>
-          {puzzle.solution && (
-            <Text style={{ fontSize: 12, fontFamily: "monospace", color: t.textMuted, marginTop: 4 }}>
-              {puzzle.solution.join("  ")}
-            </Text>
+        <View style={[st.outcome, { borderColor: t.border, backgroundColor: t.surface }]}>
+          {/* Only now: before this, these are the answer. */}
+          {solve.solutionSan.length > 0 && (
+            <>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: t.textFaint }}>
+                THE LINE
+              </Text>
+              <Text style={[st.line, { color: t.text }]}>{solve.solutionSan.join("  ")}</Text>
+            </>
+          )}
+          {puzzle.themes.length > 0 && (
+            <View style={st.themeRow}>
+              {puzzle.themes.slice(0, 4).map((tag) => (
+                <View key={tag} style={[st.themeChip, { borderColor: t.border }]}>
+                  <Text style={{ fontSize: 11, color: t.textMuted }}>{prettyTheme(tag)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          {!!puzzle.game_url && (
+            <Pressable
+              onPress={() => Linking.openURL(puzzle.game_url)}
+              style={[st.gameLink, { borderColor: t.border }]}
+            >
+              <Ionicons name="open-outline" size={14} color={t.textMuted} />
+              <Text style={{ fontSize: 12, fontWeight: "700", color: t.textMuted }}>
+                See the game
+              </Text>
+            </Pressable>
           )}
         </View>
       )}
-
-      <Legend />
     </View>
   );
 }
@@ -293,7 +190,7 @@ export function GamesScreen() {
     <Screen>
       <PageHeader
         title="Daily puzzle"
-        subtitle={current ? new Date(current.date).toDateString() : "Guess the moves"}
+        subtitle={current ? new Date(current.date).toDateString() : "One position, one line"}
       />
 
       {loading ? (
@@ -332,13 +229,15 @@ export function GamesScreen() {
                       month: "short",
                       day: "numeric",
                     })}
-                    {p.solved ? " ✓" : ""}
+                    {p.solved ? " ✓" : p.failed ? " ✕" : ""}
                   </Text>
                 </Pressable>
               ))}
             </View>
           )}
-          <PuzzleBoard puzzle={current} onSolved={replace} />
+          {/* Keyed on the puzzle: switching days is a new board, and carrying
+              the old one's move state across would be a bug hunt later. */}
+          <PuzzleBoard key={current.id} puzzle={current} onChanged={replace} />
         </ScrollView>
       )}
     </Screen>
@@ -346,28 +245,29 @@ export function GamesScreen() {
 }
 
 const st = StyleSheet.create({
-  prompt: { borderWidth: 1, borderRadius: 12, padding: 12 },
-  tile: {
-    height: 30,
-    borderWidth: 1,
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 2,
-  },
-  btn: {
+  status: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  outcome: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 8 },
+  line: { fontSize: 14, fontFamily: "monospace", fontWeight: "700" },
+  themeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  themeChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  gameLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     gap: 6,
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  outcome: { borderWidth: 1, borderRadius: 12, padding: 12, alignItems: "center" },
-  legend: { gap: 4, marginTop: 4 },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 8 },
-  legendSwatch: { width: 12, height: 12, borderRadius: 3 },
-  dayRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginBottom: 14 },
+  dayRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginBottom: 12 },
   dayChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
 });

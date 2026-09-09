@@ -666,36 +666,41 @@ export interface OlympiadGamePage {
 
 
 /**
- * The daily guess-the-moves puzzle.
+ * The daily tactics puzzle.
  *
- * `solution` is absent until the puzzle is over for this player — the server
- * withholds it, because it is the entire thing being guessed.
+ * `fen` is the position as the player sees it, and the side to move is theirs.
+ * `solution` is absent until the puzzle is over — the server withholds it,
+ * because it is the entire thing being looked for.
  */
-export type PuzzleVerdict = "correct" | "misplaced" | "piece" | "wrong";
-
 export interface Puzzle {
   id: number;
   date: string;
+  lichess_id: string;
   fen: string;
-  white: string;
-  black: string;
-  white_elo: number | null;
-  black_elo: number | null;
-  event: string;
-  year: number | null;
-  result: string;
+  rating: number | null;
+  themes: string[];
+  game_url: string;
   side_to_move: "white" | "black";
   move_number: number;
-  max_attempts: number;
-  solution_length: number;
-  /** One entry per attempt, each a list of SAN moves. */
-  guesses: string[][];
-  /** Verdicts for each attempt, aligned with `guesses`. */
-  results: PuzzleVerdict[][];
+  /** How many moves the player has to find. */
+  moves_to_find: number;
+  /**
+   * Every ply played so far, in UCI — the player's moves and the replies they
+   * were shown — so a puzzle left half-solved resumes where it was. The
+   * player's own moves are the even entries.
+   */
+  played: string[];
   solved: boolean;
+  failed: boolean;
   finished: boolean;
-  attempts_used: number;
   solution?: string[];
+}
+
+/** What the move endpoint answers with: the puzzle's new state, plus the verdict. */
+export interface PuzzleMoveResult extends Puzzle {
+  correct: boolean;
+  /** The opponent's answer to a correct move, or null when that was the last one. */
+  reply?: string | null;
 }
 
 export interface PuzzleList {

@@ -401,12 +401,15 @@ export const api = {
     return fetchJson(`${API_BASE}/puzzles/`);
   },
 
-  /** Submit one attempt. Scored server-side; returns the puzzle's new state. */
-  guessPuzzle(id: number, moves: string[]): Promise<import("@/types").Puzzle> {
-    return fetchJson(`${API_BASE}/puzzles/${id}/guess/`, {
+  /**
+   * Submit one move, in UCI. Checked server-side: the client is never told the
+   * line, only whether this move was on it and what the opponent answers.
+   */
+  playPuzzleMove(id: number, move: string): Promise<import("@/types").PuzzleMoveResult> {
+    return fetchJson(`${API_BASE}/puzzles/${id}/move/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ moves }),
+      body: JSON.stringify({ move }),
     });
   },
 
