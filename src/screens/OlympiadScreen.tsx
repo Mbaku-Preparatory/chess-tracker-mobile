@@ -192,8 +192,14 @@ export function OlympiadScreen() {
     }
   }
 
-  return (
-    <Screen>
+  // The filters render as the list's header rather than above it, so the
+  // FlatList owns the scrolling outright. Nested inside Screen's ScrollView it
+  // was a VirtualizedList without a viewport of its own: windowing switches
+  // off, every loaded row stays mounted — thousands of them, with infinite
+  // scroll over 146,000 games — and onEndReached fires against the wrong
+  // metrics.
+  const header = (
+    <View>
       <PageHeader
         title="Olympiad"
         subtitle={
@@ -213,10 +219,7 @@ export function OlympiadScreen() {
             <Pressable
               key={opt.value || "all"}
               onPress={() => setSection(opt.value)}
-              style={[
-                st.segmentItem,
-                active && { backgroundColor: t.surface },
-              ]}
+              style={[st.segmentItem, active && { backgroundColor: t.surface }]}
             >
               <Text
                 style={{
@@ -263,37 +266,42 @@ export function OlympiadScreen() {
 
       {error && <Text style={{ color: t.danger, marginBottom: 10 }}>{error}</Text>}
 
-      {loading ? (
-        <ListSkeleton />
-      ) : games.length === 0 ? (
-        <EmptyState title="No games match" description="Try a different country, round or year." />
-      ) : (
-        <FlatList
-          data={games}
-          keyExtractor={(g) => String(g.id)}
-          renderItem={({ item }) => (
-            <GameRow
-              game={item}
-              busy={openingId === item.id}
-              onPress={() => openGameViewer(item)}
-            />
-          )}
-          ListHeaderComponent={
-            <Text style={[st.count, { color: t.textFaint }]}>
-              {count.toLocaleString()} game{count === 1 ? "" : "s"}
-            </Text>
-          }
-          onEndReachedThreshold={0.5}
-          onEndReached={() => {
-            if (hasMore && !loadingMore) load(page + 1);
-          }}
-          ListFooterComponent={
-            loadingMore ? (
-              <ActivityIndicator style={{ marginVertical: 16 }} color={t.brand(600)} />
-            ) : null
-          }
-        />
+      {!loading && games.length > 0 && (
+        <Text style={[st.count, { color: t.textFaint }]}>
+          {count.toLocaleString()} game{count === 1 ? "" : "s"}
+        </Text>
       )}
+    </View>
+  );
+
+  return (
+    <Screen scroll={false} padded={false}>
+      <FlatList
+        data={loading ? [] : games}
+        keyExtractor={(g) => String(g.id)}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={header}
+        renderItem={({ item }) => (
+          <GameRow game={item} busy={openingId === item.id} onPress={() => openGameViewer(item)} />
+        )}
+        ListEmptyComponent={
+          loading ? (
+            <ListSkeleton />
+          ) : (
+            <EmptyState title="No games match" description="Try a different country, round or year." />
+          )
+        }
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (hasMore && !loadingMore) load(page + 1);
+        }}
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator style={{ marginVertical: 16 }} color={t.brand(600)} />
+          ) : null
+        }
+      />
 
       {openGame && <MasterGameViewerModal game={openGame} onClose={() => setOpenGame(null)} />}
     </Screen>
