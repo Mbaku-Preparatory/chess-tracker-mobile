@@ -98,8 +98,9 @@ export function OlympiadScreen() {
   const [section, setSection] = useState("");
   const [federation, setFederation] = useState("");
   const [round, setRound] = useState("");
-  const [yearInput, setYearInput] = useState("");
   const [year, setYear] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
 
   // Guards against two loads racing. This must be a ref, not the loadingMore
   // state: React batches state updates, so two onEndReached calls in the same
@@ -117,12 +118,12 @@ export function OlympiadScreen() {
       .catch((err) => setError(userMessage(err, "Couldn't load the Olympiad archive.")));
   }, []);
 
-  // Typing a year debounces: firing per keystroke makes "1978" four requests,
-  // three of them for years that do not exist.
+  // Typing a name debounces: firing per keystroke makes "Mongeli" seven
+  // requests, six of them for prefixes nobody asked about.
   useEffect(() => {
-    const timer = setTimeout(() => setYear(yearInput.trim()), 400);
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 400);
     return () => clearTimeout(timer);
-  }, [yearInput]);
+  }, [searchInput]);
 
   const load = useCallback(
     async (nextPage: number) => {
@@ -137,6 +138,7 @@ export function OlympiadScreen() {
           year: /^\d{4}$/.test(year) ? Number(year) : null,
           federation: federation || null,
           round: round || null,
+          search: search || null,
           page: nextPage,
         });
         setGames((prev) => {
@@ -158,7 +160,7 @@ export function OlympiadScreen() {
         setLoadingMore(false);
       }
     },
-    [section, year, federation, round]
+    [section, year, federation, round, search]
   );
 
   useEffect(() => {
@@ -174,6 +176,15 @@ export function OlympiadScreen() {
       })),
     [filters]
   );
+
+  // Built from the events that exist. Olympiads are not annual — they are
+  // biennial, with wars and boycotts leaving further gaps — so a free-typed
+  // year is mostly a guess at which ones happened.
+  const yearOptions: PickerOption[] = useMemo(() => {
+    const years = Array.from(new Set((filters?.events ?? []).map((e) => e.year)));
+    years.sort((a, b) => b - a);
+    return years.map((y) => ({ value: String(y), label: String(y) }));
+  }, [filters]);
 
   const roundOptions: PickerOption[] = useMemo(
     () => (filters?.rounds ?? []).map((r) => ({ value: String(r), label: `Round ${r}` })),
@@ -251,18 +262,25 @@ export function OlympiadScreen() {
           placeholder="All rounds"
           onChange={setRound}
         />
-        <View style={{ width: 78 }}>
-          <Text style={[st.label, { color: t.textFaint }]}>YEAR</Text>
-          <TextInput
-            value={yearInput}
-            onChangeText={(v) => setYearInput(v.replace(/\D/g, "").slice(0, 4))}
-            placeholder="Any"
-            placeholderTextColor={t.textFaint}
-            keyboardType="number-pad"
-            style={[st.yearField, { borderColor: t.border, backgroundColor: t.surface, color: t.text }]}
-          />
-        </View>
+        <PickerSheet
+          label="YEAR"
+          value={year}
+          options={yearOptions}
+          placeholder="All years"
+          onChange={setYear}
+          searchable
+        />
       </View>
+
+      <TextInput
+        value={searchInput}
+        onChangeText={setSearchInput}
+        placeholder="Search a player…"
+        placeholderTextColor={t.textFaint}
+        autoCorrect={false}
+        autoCapitalize="none"
+        style={[st.searchField, { borderColor: t.border, backgroundColor: t.surface, color: t.text }]}
+      />
 
       {error && <Text style={{ color: t.danger, marginBottom: 10 }}>{error}</Text>}
 
@@ -318,12 +336,13 @@ const st = StyleSheet.create({
     marginBottom: 12,
   },
   segmentItem: { flex: 1, alignItems: "center", paddingVertical: 7, borderRadius: 8 },
-  yearField: {
+  searchField: {
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 14,
+    marginBottom: 12,
   },
   row: {
     flexDirection: "row",
