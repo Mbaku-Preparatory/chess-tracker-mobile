@@ -396,6 +396,20 @@ export const api = {
   },
 
   /** Which Olympiads exist, and the only filter values that return anything. */
+  /** Every puzzle up to today, with this player's progress on each. */
+  getPuzzles(): Promise<import("@/types").PuzzleList> {
+    return fetchJson(`${API_BASE}/puzzles/`);
+  },
+
+  /** Submit one attempt. Scored server-side; returns the puzzle's new state. */
+  guessPuzzle(id: number, moves: string[]): Promise<import("@/types").Puzzle> {
+    return fetchJson(`${API_BASE}/puzzles/${id}/guess/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ moves }),
+    });
+  },
+
   getOlympiadFilters(): Promise<import("@/types").OlympiadFilters> {
     return fetchJson(`${API_BASE}/openings/olympiad/events/`);
   },

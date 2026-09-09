@@ -663,3 +663,42 @@ export interface OlympiadGamePage {
   page_size: number;
   has_more: boolean;
 }
+
+
+/**
+ * The daily guess-the-moves puzzle.
+ *
+ * `solution` is absent until the puzzle is over for this player — the server
+ * withholds it, because it is the entire thing being guessed.
+ */
+export type PuzzleVerdict = "correct" | "misplaced" | "piece" | "wrong";
+
+export interface Puzzle {
+  id: number;
+  date: string;
+  fen: string;
+  white: string;
+  black: string;
+  white_elo: number | null;
+  black_elo: number | null;
+  event: string;
+  year: number | null;
+  result: string;
+  side_to_move: "white" | "black";
+  move_number: number;
+  max_attempts: number;
+  solution_length: number;
+  /** One entry per attempt, each a list of SAN moves. */
+  guesses: string[][];
+  /** Verdicts for each attempt, aligned with `guesses`. */
+  results: PuzzleVerdict[][];
+  solved: boolean;
+  finished: boolean;
+  attempts_used: number;
+  solution?: string[];
+}
+
+export interface PuzzleList {
+  puzzles: Puzzle[];
+  today: string;
+}
