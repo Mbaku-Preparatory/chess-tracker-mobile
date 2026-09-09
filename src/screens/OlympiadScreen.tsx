@@ -38,11 +38,14 @@ const RESULT_LABEL: Record<string, string> = {
 
 function GameRow({ game, onPress, busy }: { game: OlympiadGame; onPress: () => void; busy: boolean }) {
   const t = useTheme();
-  // A dash, never a guess: TWIC-sourced rows genuinely carry no federation.
+  // The flag alone. The code beside it was noise — a flag already says which
+  // country — and survives only where emoji has no flag: nations that no
+  // longer exist, and FIDE's non-national associations. A dash, never a guess,
+  // where the source recorded no federation at all.
   const badge = (code: string) => {
     if (!code) return "—";
     const f = federationFor(code);
-    return f.flag ? `${f.flag} ${f.code}` : f.code;
+    return f.flag || f.code;
   };
   return (
     <Pressable

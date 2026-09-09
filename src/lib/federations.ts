@@ -199,6 +199,53 @@ export const FEDERATIONS: Federation[] = [
   fed("YEM", "Yemen", "YE"),
   fed("ZAM", "Zambia", "ZM"),
   fed("ZIM", "Zimbabwe", "ZW"),
+
+  // Added for the Olympiad archive, which spans a century and 225 federations.
+  fed("BHU", "Bhutan", "BT"),
+  fed("CAY", "Cayman Islands", "KY"),
+  fed("CHA", "Chad", "TD"),
+  fed("CIV", "Cote d'Ivoire", "CI"),
+  fed("CGO", "Congo", "CG"),
+  fed("DMA", "Dominica", "DM"),
+  fed("GCI", "Guernsey", "GG"),
+  fed("GEQ", "Equatorial Guinea", "GQ"),
+  fed("GRN", "Grenada", "GD"),
+  fed("GUM", "Guam", "GU"),
+  fed("IOM", "Isle of Man", "IM"),
+  fed("ISV", "US Virgin Islands", "VI"),
+  fed("JCI", "Jersey", "JE"),
+  fed("KOR", "South Korea", "KR"),
+  fed("KSA", "Saudi Arabia", "SA"),
+  fed("LBR", "Liberia", "LR"),
+  fed("LCA", "Saint Lucia", "LC"),
+  fed("MAC", "Macau", "MO"),
+  fed("MGL", "Mongolia", "MN"),
+  fed("MNC", "Monaco", "MC"),
+  fed("MTN", "Mauritania", "MR"),
+  fed("NRU", "Nauru", "NR"),
+  fed("PLW", "Palau", "PW"),
+  fed("SEY", "Seychelles", "SC"),
+  fed("SKN", "Saint Kitts and Nevis", "KN"),
+  fed("SSD", "South Sudan", "SS"),
+  fed("VIN", "Saint Vincent and the Grenadines", "VC"),
+
+  // Nations that no longer exist. Named so their games are findable; no flag,
+  // because emoji has none and a successor state's flag would be a lie about
+  // who played. `federationFor` renders an empty flag as nothing at all.
+  fed("URS", "Soviet Union", "", ""),
+  fed("YUG", "Yugoslavia", "", ""),
+  fed("CSR", "Czechoslovakia", "", ""),
+  fed("GDR", "East Germany", "", ""),
+  fed("ZAI", "Zaire", "", ""),
+  fed("SAA", "Saarland", "", ""),
+  fed("AHO", "Netherlands Antilles", "", ""),
+  fed("NYE", "North Yemen", "", ""),
+  fed("SYE", "South Yemen", "", ""),
+
+  // FIDE's own non-national member associations, which enter Olympiad teams.
+  fed("IBC", "Braille Chess (IBCA)", "", ""),
+  fed("ICS", "Deaf Chess (ICSC)", "", ""),
+  fed("IPC", "Disabled Chess (IPCA)", "", ""),
 ];
 
 /**
