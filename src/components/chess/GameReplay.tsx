@@ -90,6 +90,11 @@ export type SideScores = Record<"white" | "black", string | null>;
 
 const NO_SCORES: SideScores = { white: null, black: null };
 
+// One shared empty array. A literal would be a new identity every render and
+// would defeat ChessBoard's memo whenever no piece is picked up — that is,
+// almost always.
+const EMPTY_TARGETS: string[] = [];
+
 /**
  * Each side's score from the PGN's Result tag.
  *
@@ -222,15 +227,31 @@ export function GameReplay({
       }
       setSelected(line.legalTargets(square).length > 0 ? square : null);
     },
-    [selected, line]
+    // The individual callbacks, not the container: legalTargets is keyed on
+    // the position and play on the move state, so this survives the extra
+    // renders the eval causes.
+    [selected, line.play, line.legalTargets]
   );
   const engine = useStockfish(currentFen, !loading && moves.length >= 0);
 
-  const highlights = [];
-  if (currentIndex >= 0 && moves[currentIndex]) {
-    highlights.push({ square: moves[currentIndex].from, color: "rgba(255,214,10,0.4)" });
-    highlights.push({ square: moves[currentIndex].to, color: "rgba(255,214,10,0.55)" });
-  }
+  // Memoised because ChessBoard is: a fresh array literal every render makes
+  // its memo a no-op, which is both easy to do by accident and invisible.
+  const highlights = useMemo(() => {
+    const move = currentIndex >= 0 ? moves[currentIndex] : null;
+    return move
+      ? [
+          { square: move.from, color: "rgba(255,214,10,0.4)" },
+          { square: move.to, color: "rgba(255,214,10,0.55)" },
+        ]
+      : [];
+  }, [currentIndex, moves]);
+
+  // Same, and this one also stops a Chess position being constructed on every
+  // render for as long as a piece is picked up.
+  const targets = useMemo(
+    () => (selected ? line.legalTargets(selected) : EMPTY_TARGETS),
+    [selected, line.legalTargets]
+  );
 
   async function handleDownload() {
     if (!pgn) return;
@@ -309,7 +330,7 @@ export function GameReplay({
                   highlights={highlights}
                   onSquarePress={handleSquare}
                   selected={selected}
-                  targets={selected ? line.legalTargets(selected) : []}
+                  targets={targets}
                 />
               )}
               <PlayerPlate player={bottom} color={orientation} width={boardSize} score={sideScores[orientation]} />

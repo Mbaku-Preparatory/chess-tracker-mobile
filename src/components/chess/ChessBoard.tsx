@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Svg, { Circle, Defs, G, Line, Marker, Path, Polygon } from "react-native-svg";
 
@@ -160,13 +161,22 @@ const PIECE_PATHS: Record<string, React.ReactNode> = {
   ),
 };
 
-function PieceIcon({ type, size }: { type: string; size: number }) {
+/**
+ * Memoised, and that is not a micro-optimisation.
+ *
+ * Each piece is an <Svg> — a native view with several paths inside it — and a
+ * full board is up to 32 of them. Without this, every render of the parent
+ * repainted all 32, and the parent renders several times per move: once for
+ * the move, and at least twice more for the eval arriving. The board was doing
+ * a hundred-odd path re-renders per move to draw pieces that had not changed.
+ */
+const PieceIcon = memo(function PieceIcon({ type, size }: { type: string; size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 45 45">
       {PIECE_PATHS[type]}
     </Svg>
   );
-}
+});
 
 function parseFenBoard(fen: string): (string | null)[][] {
   const placement = fen.split(" ")[0];
@@ -203,7 +213,7 @@ export interface BoardArrow {
   color: string;
 }
 
-export function ChessBoard({
+function ChessBoardInner({
   fen,
   orientation = "white",
   size = 320,
@@ -328,6 +338,15 @@ export function ChessBoard({
     </View>
   );
 }
+
+/**
+ * Memoised for the same reason as the piece, one level up.
+ *
+ * Callers must keep `highlights` and `targets` stable — a fresh array literal
+ * every render defeats this entirely, which is easy to do by accident and
+ * invisible when it happens.
+ */
+export const ChessBoard = memo(ChessBoardInner);
 
 const st = StyleSheet.create({
   wrap: {

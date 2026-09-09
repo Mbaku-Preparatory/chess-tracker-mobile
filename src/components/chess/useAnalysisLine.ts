@@ -61,17 +61,30 @@ export function useAnalysisLine(mainMoves: ParsedMove[]): AnalysisLine {
     [mainMoves]
   );
 
-  return {
-    moves,
-    index: state.index,
-    fen,
-    branch: state.branch,
-    branchStartsAt: startsAt,
-    inBranch: startsAt !== null && state.index >= startsAt,
-    legalTargets: useCallback((from: string) => legalTargetsFrom(fen, from), [fen]),
-    play,
-    goTo,
-    clearBranch: useCallback(() => setState(clearBranchOf), []),
-    reset: useCallback(() => setState(INITIAL), []),
-  };
+  const legalTargets = useCallback((from: string) => legalTargetsFrom(fen, from), [fen]);
+  const clearBranch = useCallback(() => setState(clearBranchOf), []);
+  const reset = useCallback(() => setState(INITIAL), []);
+
+  // Memoised, and load-bearing. A fresh object every render makes every
+  // `useMemo([..., line])` in a consumer recompute and every callback built
+  // from it change identity — which silently defeats the board's own memo, and
+  // the board is 32 SVG pieces. The parent re-renders several times per move
+  // (the move itself, then the eval arriving), so that is the difference
+  // between repainting the pieces once and repainting them four times.
+  return useMemo(
+    () => ({
+      moves,
+      index: state.index,
+      fen,
+      branch: state.branch,
+      branchStartsAt: startsAt,
+      inBranch: startsAt !== null && state.index >= startsAt,
+      legalTargets,
+      play,
+      goTo,
+      clearBranch,
+      reset,
+    }),
+    [moves, state.index, state.branch, fen, startsAt, legalTargets, play, goTo, clearBranch, reset]
+  );
 }

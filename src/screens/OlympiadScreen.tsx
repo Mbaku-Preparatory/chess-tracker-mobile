@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -36,7 +36,23 @@ const RESULT_LABEL: Record<string, string> = {
   "1/2-1/2": "½–½",
 };
 
-function GameRow({ game, onPress, busy }: { game: OlympiadGame; onPress: () => void; busy: boolean }) {
+/**
+ * Memoised: a filter change re-renders the screen, and without this every row
+ * already on screen re-renders with it. FlatList windows the list, so that is
+ * a dozen rows rather than a thousand — but it is a dozen for nothing.
+ */
+const GameRow = memo(function GameRow({
+  game,
+  onPress,
+  busy,
+}: {
+  game: OlympiadGame;
+  // Takes the game rather than closing over it, so the list can pass one
+  // stable handler. An inline arrow here would be a new identity per render
+  // and would undo the memo above.
+  onPress: (game: OlympiadGame) => void;
+  busy: boolean;
+}) {
   const t = useTheme();
   // The flag alone. The code beside it was noise — a flag already says which
   // country — and survives only where emoji has no flag: nations that no
@@ -49,7 +65,7 @@ function GameRow({ game, onPress, busy }: { game: OlympiadGame; onPress: () => v
   };
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => onPress(game)}
       style={({ pressed }) => [
         st.row,
         { borderColor: t.border, backgroundColor: pressed ? t.elevated : t.surface },
@@ -82,7 +98,7 @@ function GameRow({ game, onPress, busy }: { game: OlympiadGame; onPress: () => v
       )}
     </Pressable>
   );
-}
+});
 
 export function OlympiadScreen() {
   const t = useTheme();
@@ -191,7 +207,7 @@ export function OlympiadScreen() {
     [filters]
   );
 
-  async function openGameViewer(game: OlympiadGame) {
+  const openGameViewer = useCallback(async (game: OlympiadGame) => {
     setOpeningId(game.id);
     try {
       const full = await api.getOlympiadGameMoves(game.id);
@@ -201,7 +217,7 @@ export function OlympiadScreen() {
     } finally {
       setOpeningId(null);
     }
-  }
+  }, []);
 
   // The filters render as the list's header rather than above it, so the
   // FlatList owns the scrolling outright. Nested inside Screen's ScrollView it
