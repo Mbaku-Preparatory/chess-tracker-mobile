@@ -287,7 +287,12 @@ export function GameReplay({
   // Read reactively so the board resizes on rotation and on foldables, rather
   // than freezing at whatever the width happened to be on first render.
   const { width: windowWidth } = useWindowDimensions();
-  const boardSize = Math.min(windowWidth - 100, 320);
+  // The full width of the screen. It used to leave 100px for a vertical eval
+  // bar beside it and cap at 320, which on a modern phone wasted a third of
+  // the screen on a game viewer whose whole point is the board. The eval bar
+  // now sits under it, so nothing is competing for the width, and the board is
+  // square — the height follows.
+  const boardSize = windowWidth;
 
   // Plates are placed by seat, not by colour: whoever is at the bottom of the
   // board gets the bottom plate, which flips with the orientation.
@@ -310,14 +315,18 @@ export function GameReplay({
 
         <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
           <View style={[st.boardArea, { backgroundColor: t.elevated }]}>
-            <EvalBar score={engine.score} mate={engine.mate} depth={engine.depth} isAnalyzing={engine.isAnalyzing} source={engine.source} height={boardSize} />
-            <View style={{ gap: 6 }}>
-              <PlayerPlate
-                player={top}
-                color={orientation === "white" ? "black" : "white"}
-                width={boardSize}
-                score={sideScores[orientation === "white" ? "black" : "white"]}
-              />
+            <View style={{ gap: 6, width: boardSize }}>
+              {/* Plates are inset while the board is not: the board reaching
+                  both edges is the point, but a name touching the screen edge
+                  reads as a rendering fault. */}
+              <View style={{ paddingHorizontal: 12 }}>
+                <PlayerPlate
+                  player={top}
+                  color={orientation === "white" ? "black" : "white"}
+                  width={boardSize - 24}
+                  score={sideScores[orientation === "white" ? "black" : "white"]}
+                />
+              </View>
               {loading ? (
                 <View style={{ width: boardSize, height: boardSize, alignItems: "center", justifyContent: "center" }}>
                   <ActivityIndicator color={t.brand(600)} />
@@ -331,9 +340,29 @@ export function GameReplay({
                   onSquarePress={handleSquare}
                   selected={selected}
                   targets={targets}
+                  radius={0}
                 />
               )}
-              <PlayerPlate player={bottom} color={orientation} width={boardSize} score={sideScores[orientation]} />
+              <View style={{ paddingHorizontal: 12 }}>
+                <PlayerPlate
+                  player={bottom}
+                  color={orientation}
+                  width={boardSize - 24}
+                  score={sideScores[orientation]}
+                />
+              </View>
+              {/* Under the board and both names, so it reads as a summary of
+                  the position rather than as part of either player's plate. */}
+              <View style={{ paddingHorizontal: 12, paddingTop: 2 }}>
+                <EvalBar
+                  orientation="horizontal"
+                  score={engine.score}
+                  mate={engine.mate}
+                  depth={engine.depth}
+                  isAnalyzing={engine.isAnalyzing}
+                  source={engine.source}
+                />
+              </View>
             </View>
           </View>
 
@@ -416,9 +445,12 @@ export function GameReplay({
                   <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted }}>Lichess</Text>
                 )}
               </Pressable>
-              <Pressable onPress={handleShare} style={[st.actionBtn, { borderColor: t.border }]}>
-                <Ionicons name="share-outline" size={13} color={t.textMuted} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted }}>Share</Text>
+              {/* share-social, not share: the three linked nodes are the glyph
+                  people read as "share", where Ionicons' "share" is a box with
+                  an arrow that reads as "open elsewhere". No label — the icon
+                  carries it, and the row is tight with four controls. */}
+              <Pressable onPress={handleShare} style={[st.actionIconBtn, { borderColor: t.border }]}>
+                <Ionicons name="share-social-outline" size={15} color={t.textMuted} />
               </Pressable>
             </View>
           )}
@@ -441,7 +473,7 @@ export function GameReplay({
 const st = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingTop: 56, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth },
   closeBtn: { padding: 4 },
-  boardArea: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 20 },
+  boardArea: { alignItems: "center", paddingVertical: 16 },
   moveListWrap: { padding: 16 },
   backToGame: {
     alignSelf: "center",

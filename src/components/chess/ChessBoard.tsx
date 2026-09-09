@@ -224,6 +224,7 @@ function ChessBoardInner({
   onSquarePress,
   selected = null,
   targets = [],
+  radius = 8,
 }: {
   fen: string;
   orientation?: "white" | "black";
@@ -238,6 +239,9 @@ function ChessBoardInner({
   selected?: string | null;
   /** Where that piece may legally go. */
   targets?: string[];
+  /** 0 when the board runs edge to edge — a rounded corner against the screen
+   *  edge reads as a clipping fault rather than as a rounded board. */
+  radius?: number;
 }) {
   const squareSize = size / 8;
   const board = parseFenBoard(fen);
@@ -247,7 +251,7 @@ function ChessBoardInner({
   const displayRows = orientation === "white" ? board : [...board].reverse();
 
   return (
-    <View style={[st.wrap, { width: size, height: size, backgroundColor: darkSquare }]}>
+    <View style={[st.wrap, { width: size, height: size, backgroundColor: darkSquare, borderRadius: radius }]}>
       {displayRows.map((row, rIdx) => {
         const rank = orientation === "white" ? 8 - rIdx : rIdx + 1;
         const displayCells = orientation === "white" ? row : [...row].reverse();
@@ -350,7 +354,6 @@ export const ChessBoard = memo(ChessBoardInner);
 
 const st = StyleSheet.create({
   wrap: {
-    borderRadius: 8,
     overflow: "hidden",
   },
 });
