@@ -3,6 +3,7 @@ import type { NavigatorScreenParams } from "@react-navigation/native";
 export type MainTabParamList = {
   Schedule: undefined;
   Players: undefined;
+  Explorer: undefined;
 };
 
 export type RootStackParamList = {
