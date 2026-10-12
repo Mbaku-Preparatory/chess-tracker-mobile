@@ -19,13 +19,10 @@ import { PlayerDetailScreen } from "@/screens/PlayerDetailScreen";
 import { PlayerGamesScreen } from "@/screens/PlayerGamesScreen";
 import { PlayerPrepScreen } from "@/screens/PlayerPrepScreen";
 import { PlayerImportScreen } from "@/screens/PlayerImportScreen";
-import { MasterGamesScreen } from "@/screens/MasterGamesScreen";
 import { SessionNewScreen } from "@/screens/SessionNewScreen";
 import { SessionDetailScreen } from "@/screens/SessionDetailScreen";
 import { AccountScreen } from "@/screens/AccountScreen";
 import MyProfileScreen from "@/screens/MyProfileScreen";
-import { OlympiadScreen } from "@/screens/OlympiadScreen";
-import { GamesScreen } from "@/screens/GamesScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -33,8 +30,6 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const TAB_ICONS: Record<keyof MainTabParamList, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Schedule: { active: "today", inactive: "today-outline" },
   Players: { active: "people", inactive: "people-outline" },
-  Olympiad: { active: "earth", inactive: "earth-outline" },
-  Games: { active: "grid", inactive: "grid-outline" },
 };
 
 function MainTabs() {
@@ -57,11 +52,8 @@ function MainTabs() {
           not Schedule - is the app's primary destination. The route name stays "Players" so the
           existing navigate("Players") call sites keep working. */}
       <Tab.Screen name="Players" component={PlayersScreen} options={{ tabBarLabel: "Prep" }} />
-      <Tab.Screen name="Olympiad" component={OlympiadScreen} />
-      <Tab.Screen name="Games" component={GamesScreen} />
       {/* Schedule sits last: it is the one tab you go to on purpose, on the day
-          you need it, rather than something you browse. The three ahead of it
-          are all "show me chess". */}
+          you need it, rather than something you browse. */}
       <Tab.Screen name="Schedule" component={SchedulerScreen} />
     </Tab.Navigator>
   );
@@ -94,7 +86,6 @@ export function RootNavigator() {
           <Stack.Screen name="PlayerGames" component={PlayerGamesScreen} />
           <Stack.Screen name="PlayerPrep" component={PlayerPrepScreen} />
           <Stack.Screen name="PlayerImport" component={PlayerImportScreen} />
-          <Stack.Screen name="MasterGames" component={MasterGamesScreen} />
           <Stack.Screen name="SessionNew" component={SessionNewScreen} />
           <Stack.Screen name="SessionDetail" component={SessionDetailScreen} />
           <Stack.Screen name="MyProfile" component={MyProfileScreen} />

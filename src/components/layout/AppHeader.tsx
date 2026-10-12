@@ -64,9 +64,6 @@ export function AppHeader() {
           <TouchableOpacity onPress={() => navigation.navigate("MainTabs", { screen: "Players" })} style={st.navBtn} hitSlop={8}>
             <Ionicons name="people-outline" size={20} color={t.textMuted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("MasterGames")} style={st.navBtn} hitSlop={8}>
-            <Ionicons name="library-outline" size={20} color={t.textMuted} />
-          </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuOpen(true)} style={st.avatarBtn} hitSlop={8}>
             {profilePic ? (
               <Image source={{ uri: profilePic }} style={st.avatarImg} />
