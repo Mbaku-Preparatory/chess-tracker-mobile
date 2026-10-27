@@ -5,9 +5,9 @@ import {
   type Branch,
   type LineState,
   branchStartsAt,
-  clearBranch as clearBranchOf,
   fenAt,
   legalTargets as legalTargetsFrom,
+  lineOf,
   movesOf,
   playMove,
 } from "./analysisLine";
@@ -20,17 +20,25 @@ export { START_FEN } from "./analysisLine";
  * holds the state and re-exposes it.
  */
 export interface AnalysisLine {
+  /** The line the board follows: the game, or the game into the branch. */
   moves: ParsedMove[];
   index: number;
   fen: string;
   branch: Branch | null;
   branchStartsAt: number | null;
+  /** Following the branch rather than the game. */
+  onBranch: boolean;
+  /** On the branch, past where it leaves the game. */
   inBranch: boolean;
   legalTargets: (from: string) => string[];
   /** False when the move was not legal from here. */
   play: (from: string, to: string) => boolean;
+  /** Step along the line the board is following. */
   goTo: (index: number) => void;
-  clearBranch: () => void;
+  /** Jump to a move of the game itself; the branch stays in the list. */
+  selectMain: (index: number) => void;
+  /** Jump to a move of the branch, by its index in `movesOf(main, branch)`. */
+  selectBranch: (index: number) => void;
   /** Back to the starting position with no branch, for when the game changes. */
   reset: () => void;
 }
@@ -38,7 +46,7 @@ export interface AnalysisLine {
 export function useAnalysisLine(mainMoves: ParsedMove[]): AnalysisLine {
   const [state, setState] = useState<LineState>(INITIAL);
 
-  const moves = useMemo(() => movesOf(mainMoves, state.branch), [mainMoves, state.branch]);
+  const moves = useMemo(() => lineOf(mainMoves, state), [mainMoves, state]);
   const fen = fenAt(moves, state.index);
   const startsAt = branchStartsAt(state.branch);
 
@@ -56,13 +64,21 @@ export function useAnalysisLine(mainMoves: ParsedMove[]): AnalysisLine {
     (next: number) =>
       setState((prev) => ({
         ...prev,
-        index: Math.max(-1, Math.min(next, movesOf(mainMoves, prev.branch).length - 1)),
+        index: Math.max(-1, Math.min(next, lineOf(mainMoves, prev).length - 1)),
       })),
+    [mainMoves]
+  );
+  const selectMain = useCallback(
+    (next: number) => setState((prev) => ({ ...prev, onBranch: false, index: Math.max(-1, Math.min(next, mainMoves.length - 1)) })),
+    [mainMoves]
+  );
+  const selectBranch = useCallback(
+    (next: number) =>
+      setState((prev) => (prev.branch ? { ...prev, onBranch: true, index: Math.min(next, movesOf(mainMoves, prev.branch).length - 1) } : prev)),
     [mainMoves]
   );
 
   const legalTargets = useCallback((from: string) => legalTargetsFrom(fen, from), [fen]);
-  const clearBranch = useCallback(() => setState(clearBranchOf), []);
   const reset = useCallback(() => setState(INITIAL), []);
 
   // Memoised, and load-bearing. A fresh object every render makes every
@@ -78,13 +94,15 @@ export function useAnalysisLine(mainMoves: ParsedMove[]): AnalysisLine {
       fen,
       branch: state.branch,
       branchStartsAt: startsAt,
-      inBranch: startsAt !== null && state.index >= startsAt,
+      onBranch: state.onBranch,
+      inBranch: state.onBranch && startsAt !== null && state.index >= startsAt,
       legalTargets,
       play,
       goTo,
-      clearBranch,
+      selectMain,
+      selectBranch,
       reset,
     }),
-    [moves, state.index, state.branch, fen, startsAt, legalTargets, play, goTo, clearBranch, reset]
+    [moves, state.index, state.branch, state.onBranch, fen, startsAt, legalTargets, play, goTo, selectMain, selectBranch, reset]
   );
 }
