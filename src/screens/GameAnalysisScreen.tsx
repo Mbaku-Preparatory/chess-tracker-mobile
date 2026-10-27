@@ -24,7 +24,7 @@ function scoresFromGameResult(result: string, playerColor: "white" | "black"): S
 
 const safe = (s: string) => s.replace(/[^a-z0-9]/gi, "_").replace(/_+/g, "_");
 
-function ScoutedGame({ game, onBack }: { game: Game; onBack: () => void }) {
+function ScoutedGame({ game }: { game: Game }) {
   const t = useTheme();
   const [pgn, setPgn] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +60,6 @@ function ScoutedGame({ game, onBack }: { game: Game; onBack: () => void }) {
       players={color === "black" ? { white: opponent } : { black: opponent }}
       // Only used when the PGN has no Result tag.
       scores={scoresFromGameResult(game.result, color)}
-      onBack={onBack}
       filename={`${safe(game.opponent_name)}_${game.date_played ? game.date_played.replace(/-/g, "") : "unknown"}_${game.result}.pgn`}
       header={
         <View>
@@ -93,14 +92,13 @@ function masterPgn(game: MasterGame): string {
   return `${head.join("\n")}\n\n${game.moves ?? ""}`;
 }
 
-function MasterGameView({ game, onBack }: { game: MasterGame; onBack: () => void }) {
+function MasterGameView({ game }: { game: MasterGame }) {
   const t = useTheme();
   const resultLabel = game.result === "1/2-1/2" ? "½–½" : game.result === "1-0" ? "1–0" : "0–1";
   return (
     <GameReplay
       pgn={masterPgn(game)}
       orientation="white"
-      onBack={onBack}
       filename={`${safe(game.white)}_vs_${safe(game.black)}_${game.year ?? "?"}_${game.result.replace("/", "-")}.pgn`}
       header={
         <View>
@@ -125,11 +123,6 @@ function MasterGameView({ game, onBack }: { game: MasterGame; onBack: () => void
 
 /** Any game, on its own screen. Android's back button and iOS's swipe-back
  * leave it, because it is a stack screen rather than a modal. */
-export function GameAnalysisScreen({ route, navigation }: Props) {
-  const onBack = () => navigation.goBack();
-  return route.params.kind === "game" ? (
-    <ScoutedGame game={route.params.game} onBack={onBack} />
-  ) : (
-    <MasterGameView game={route.params.game} onBack={onBack} />
-  );
+export function GameAnalysisScreen({ route }: Props) {
+  return route.params.kind === "game" ? <ScoutedGame game={route.params.game} /> : <MasterGameView game={route.params.game} />;
 }

@@ -236,7 +236,6 @@ export function GameReplay({
   error,
   orientation = "white",
   header,
-  onBack,
   filename,
   players,
   scores,
@@ -246,7 +245,6 @@ export function GameReplay({
   error?: string | null;
   orientation?: "white" | "black";
   header: React.ReactNode;
-  onBack: () => void;
   filename: string;
   /** Used only for sides the PGN itself does not name. */
   players?: { white?: SidePlayer; black?: SidePlayer };
@@ -355,10 +353,6 @@ export function GameReplay({
   return (
       <View style={{ flex: 1, backgroundColor: t.bg }}>
         <View style={[st.header, { borderColor: t.border, paddingTop: insets.top + 8 }]}>
-          <Pressable onPress={onBack} style={[st.backBtn, { borderColor: t.brand(600) }]} accessibilityLabel="Back" hitSlop={8}>
-            <Ionicons name="chevron-back" size={16} color={t.brand(600)} />
-            <Text style={{ fontSize: 14, fontWeight: "700", color: t.brand(600) }}>Back</Text>
-          </Pressable>
           <View style={{ flex: 1 }}>{header}</View>
         </View>
 
@@ -492,7 +486,6 @@ export function GameReplay({
 
 const st = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingBottom: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 2, borderWidth: 2, borderRadius: 999, paddingLeft: 6, paddingRight: 10, paddingVertical: 4 },
   enginePanel: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12 },
   scorePill: { minWidth: 54, alignItems: "center", borderRadius: 5, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 5, paddingVertical: 2 },
   boardArea: { alignItems: "center", paddingVertical: 16 },
