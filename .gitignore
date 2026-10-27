@@ -1,7 +1,9 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # dependencies
-node_modules/
+# No trailing slash: "node_modules/" matches only a directory, so a worktree's
+# node_modules symlink slipped past it and was committed (48153c0).
+node_modules
 
 # Expo
 .expo/
