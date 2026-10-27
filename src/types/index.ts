@@ -93,27 +93,6 @@ export interface PerformanceSummary {
   summary_text: string;
 }
 
-export interface Strength {
-  id: number;
-  title: string;
-  description: string;
-  order: number;
-}
-
-export interface Weakness {
-  id: number;
-  title: string;
-  description: string;
-  order: number;
-}
-
-export interface PrepRecommendation {
-  id: number;
-  scenario_title: string;
-  description: string;
-  order: number;
-}
-
 export interface Game {
   /** Legacy sequential id. Prefer public_id for anything that goes in a URL. */
   id: number;
@@ -140,32 +119,8 @@ export interface Game {
 
 export interface PlayerDetail extends Player {
   performance_summary: PerformanceSummary | null;
-  strengths: Strength[];
-  weaknesses: Weakness[];
-  prep_recommendations: PrepRecommendation[];
   opening_stats: OpeningStat[];
   recent_games: Game[];
-}
-
-export type ScoutingSectionType = "win_condition" | "time_pressure" | "common_mistakes" | "quick_prep";
-
-export interface ScoutingSection {
-  id: number;
-  section_type: ScoutingSectionType;
-  title: string;
-  content: Record<string, any>;
-  order: number;
-}
-
-export interface OpeningDistribution {
-  white: {
-    openings: OpeningStat[];
-    total_games: number;
-  };
-  black: {
-    openings: OpeningStat[];
-    total_games: number;
-  };
 }
 
 export interface PaginatedResponse<T> {
@@ -219,41 +174,6 @@ export interface ChessResultsFetchMeta {
   skipped_reason?: "no_moves";
 }
 
-export interface ChessResultsPlayerCandidate {
-  cr_id: string;
-  name: string;
-  federation: string;
-  title?: string | null;
-  fide_id?: string | null;
-  rating?: number | null;
-  birth_year?: number | null;
-}
-
-export interface ChessResultsTournamentOption {
-  tnr: string;
-  snr: string;
-  name: string;
-  year?: number | null;
-  location?: string | null;
-  date?: string | null;
-  url?: string | null;
-}
-
-export interface ChessResultsImportResult {
-  games_imported: number;
-  games_skipped: number;
-  games_failed: number;
-  source_type: "pgn" | "pairings";
-  fetch_meta: ChessResultsFetchMeta;
-  // PGN path also carries the PGNImportResult fields
-  player_slug?: string;
-  player_name?: string;
-  games_created?: number;
-  games_updated?: number;
-  opening_summary?: { name: string; count: number; percent: number }[];
-  result_summary?: { wins: number; draws: number; losses: number };
-}
-
 export interface PGNImportResult {
   player_public_id?: string;
   player_slug: string;
@@ -264,98 +184,6 @@ export interface PGNImportResult {
   games_skipped: number;
   opening_summary: { name: string; count: number; percent: number }[];
   result_summary: { wins: number; draws: number; losses: number };
-}
-
-// ── Phase 4: Insight engine types ───────────────────────────────────────────
-
-export interface InsightMeta {
-  player_slug: string;
-  player_name: string;
-  games_analyzed: number;
-  openings_tracked: number;
-  repertoire_codes_provided: string[];
-  generated_at: string;
-  data_quality: "good" | "fair" | "limited" | "none";
-}
-
-export interface InsightConfidence {
-  score: number;
-  label: "High" | "Medium" | "Low" | "Very Low" | "None";
-  reason: string;
-}
-
-export interface InsightWeakness {
-  eco_code: string;
-  opening_name: string;
-  color: ColorChoice;
-  score_percent: number;
-  games_count: number;
-  severity: "critical" | "high" | "moderate";
-  in_your_repertoire: boolean;
-  repertoire_match: "exact" | "family" | "";
-  description: string;
-}
-
-export interface InsightRecommendedLine {
-  eco_code: string;
-  opening_name: string;
-  color: ColorChoice;
-  opponent_score: number;
-  opponent_games: number;
-  repertoire_match: "exact" | "family";
-  recommendation_strength: "strong" | "moderate" | "low";
-  rationale: string;
-}
-
-export interface InsightDangerZone {
-  eco_code: string;
-  opening_name: string;
-  color: ColorChoice;
-  score_percent: number;
-  games_count: number;
-  risk_level: "high" | "medium";
-  in_your_repertoire: boolean;
-  advice: string;
-}
-
-export interface InsightMatchPlanItem {
-  order: number;
-  type: "target" | "caution" | "consider" | "general";
-  text: string;
-}
-
-export interface InsightEvidence {
-  total_games: number;
-  white_games: number;
-  black_games: number;
-  win_rate: number;
-  white_score: number;
-  black_score: number;
-  top_openings: { eco_code: string; opening_name: string; color: string; games_count: number; score_percent: number }[];
-  worst_openings: { eco_code: string; opening_name: string; color: string; games_count: number; score_percent: number }[];
-  best_openings: { eco_code: string; opening_name: string; color: string; games_count: number; score_percent: number }[];
-}
-
-export interface PlayerInsights {
-  meta: InsightMeta;
-  confidence: InsightConfidence;
-  executive_summary: string;
-  recommended_lines: InsightRecommendedLine[];
-  weaknesses: InsightWeakness[];
-  danger_zones: InsightDangerZone[];
-  match_plan: InsightMatchPlanItem[];
-  evidence: InsightEvidence;
-}
-
-export interface OpeningResult {
-  slug: string;
-  name: string;
-  eco_code: string;
-  family: string;
-  variation: string;
-  pgn: string;
-  uci: string;
-  epd: string;
 }
 
 // ── Opening Study Suggestions ─────────────────────────────────────────────────
@@ -372,13 +200,6 @@ export interface OpeningStudySuggestion {
 }
 
 // ── Tournament Summary ────────────────────────────────────────────────────────
-
-export interface TournamentSummary {
-  event: string;
-  game_count: number;
-  year_min: number | null;
-  year_max: number | null;
-}
 
 // ── Master Games ─────────────────────────────────────────────────────────────
 
@@ -639,98 +460,3 @@ export interface Payment {
 }
 
 
-/**
- * The Chess Olympiad browser.
- *
- * A team event is navigated by country and round rather than by opening, so
- * these carry a federation on each side and the round as written. Both are
- * blank on games that came from TWIC — that source's PGN has no federation at
- * all and the round was discarded before it was ever stored — so the UI shows
- * a dash rather than inventing one.
- */
-export interface OlympiadGame {
-  id: number;
-  white: string;
-  black: string;
-  white_federation: string;
-  black_federation: string;
-  white_elo: number | null;
-  black_elo: number | null;
-  result: string;
-  eco: string;
-  opening_name: string;
-  event: string;
-  site: string;
-  year: number | null;
-  round: string;
-  /** The round a reader means: "3.31" is round 3. Null when unrecorded. */
-  round_number: number | null;
-  /** "open" | "women". Blank on games that are not Olympiad games. */
-  section: string;
-}
-
-export interface OlympiadGameWithMoves extends OlympiadGame {
-  moves: string;
-}
-
-export interface OlympiadFilters {
-  events: { year: number; event: string; section: string; games: number }[];
-  /** The two Olympiads, with how many games each holds. */
-  sections: { value: string; label: string; games: number }[];
-  /** Only federations that actually played — never the full ISO list. */
-  federations: string[];
-  rounds: string[];
-  total_games: number;
-}
-
-export interface OlympiadGamePage {
-  results: OlympiadGame[];
-  count: number;
-  page: number;
-  page_size: number;
-  has_more: boolean;
-}
-
-
-/**
- * The daily tactics puzzle.
- *
- * `fen` is the position as the player sees it, and the side to move is theirs.
- * `solution` is absent until the puzzle is over — the server withholds it,
- * because it is the entire thing being looked for.
- */
-export interface Puzzle {
-  id: number;
-  date: string;
-  lichess_id: string;
-  fen: string;
-  rating: number | null;
-  themes: string[];
-  game_url: string;
-  side_to_move: "white" | "black";
-  move_number: number;
-  /** How many moves the player has to find. */
-  moves_to_find: number;
-  /**
-   * Every ply played so far, in UCI — the player's moves and the replies they
-   * were shown — so a puzzle left half-solved resumes where it was. The
-   * player's own moves are the even entries.
-   */
-  played: string[];
-  solved: boolean;
-  failed: boolean;
-  finished: boolean;
-  solution?: string[];
-}
-
-/** What the move endpoint answers with: the puzzle's new state, plus the verdict. */
-export interface PuzzleMoveResult extends Puzzle {
-  correct: boolean;
-  /** The opponent's answer to a correct move, or null when that was the last one. */
-  reply?: string | null;
-}
-
-export interface PuzzleList {
-  puzzles: Puzzle[];
-  today: string;
-}

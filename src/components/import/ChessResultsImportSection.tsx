@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import graphqlClient from "@/api/graphqlClient";
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
 import { requestNotificationPermissions } from "@/lib/notifications";
@@ -11,39 +12,42 @@ import { useTheme } from "@/theme/ThemeContext";
 import { Button } from "@/components/ui/Button";
 import { ImportProgressBar } from "@/components/import/ImportProgressBar";
 import type { RootStackParamList } from "@/navigation/types";
-import type {
-  ChessResultsPlayerCandidate,
-  ChessResultsTournamentOption,
-  ImportJob,
-} from "@/types";
+import type { ImportJob } from "@/types";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
 const CR_COLOR = "#1a3a6b";
 const POLL_INTERVAL_MS = 2000;
-
-type Step =
-  | { type: "idle" }
-  | { type: "searching" }
-  | { type: "selecting-player"; candidates: ChessResultsPlayerCandidate[] }
-  | { type: "loading-tournaments"; name: string }
-  // Picking a player with a FIDE ID starts the import there and then, so there
-  // is a moment between the tap and the job existing.
-  | { type: "starting"; name: string }
-  | { type: "choose-mode"; playerName: string; tournaments: ChessResultsTournamentOption[] }
-  | { type: "selecting-tournaments"; playerName: string; tournaments: ChessResultsTournamentOption[] }
-  // The import is a row in the database being worked on by the worker service,
-  // not something this component is doing. All we hold is its id.
-  | { type: "job"; job: ImportJob };
-
-function buildImportUrl(t: ChessResultsTournamentOption): string {
-  if (t.url) return t.url;
-  return `https://chess-results.com/tnr${t.tnr}.aspx?lan=1&art=9&snr=${t.snr}`;
-}
 
 function isTerminal(job: ImportJob): boolean {
   return job.status === "succeeded" || job.status === "failed" || job.status === "cancelled";
 }
 
+type Candidate = { fideId: string; fullName: string; federation: string; standardRating: number | null };
+
+/**
+ * Players on FIDE's rating list matching a name. Answered from our own copy of
+ * the list, so it costs no request to FIDE or chess-results.
+ */
+async function searchRatingList(name: string): Promise<Candidate[]> {
+  // JSON string escaping is valid GraphQL string syntax.
+  const { data } = await graphqlClient({
+    data: {
+      query: `query { searchPublicPlayers(query: ${JSON.stringify(name)}, limit: 8) {
+        fideId fullName federation standardRating
+      } }`,
+    },
+  });
+  return data?.data?.searchPublicPlayers ?? [];
+}
+
+/**
+ * Imports every game chess-results has for one FIDE ID.
+ *
+ * chess-results' game search returns a whole career in one export, so there
+ * is nothing to choose: the player's FIDE ID is the whole input. A player
+ * without one on file can be looked up by name on FIDE's rating list.
+ */
 export function ChessResultsImportSection({
   slug,
   playerRef,
@@ -56,21 +60,20 @@ export function ChessResultsImportSection({
   const t = useTheme();
   const navigation = useNavigation<Nav>();
 
-  // The profile already knows who this is — don't offer to look up someone else.
-  const hasKnownFideId = Boolean(fideId?.trim());
+  // The profile already knows who this is — don't offer to import someone else.
+  const knownFideId = fideId?.trim() || "";
 
-  const [step, setStep] = useState<Step>({ type: "idle" });
-  const [searchMode, setSearchMode] = useState<"fide_id" | "name">(
-    hasKnownFideId ? "fide_id" : "name"
-  );
-  const [fideInput, setFideInput] = useState(fideId ?? "");
+  const [job, setJob] = useState<ImportJob | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [fideInput, setFideInput] = useState("");
   const [nameInput, setNameInput] = useState("");
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [candidates, setCandidates] = useState<Candidate[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [notifyEmail, setNotifyEmail] = useState(false);
   const [jobError, setJobError] = useState<string | null>(null);
 
-  const activeJobId = step.type === "job" && !isTerminal(step.job) ? step.job.id : null;
+  const activeJobId = job && !isTerminal(job) ? job.id : null;
 
   // ── Reconnect to an import already in progress ──────────────────────────────
   //
@@ -83,9 +86,7 @@ export function ChessResultsImportSection({
       try {
         const { results } = await api.recentImportJobs(slug);
         const live = results.find((j) => !isTerminal(j));
-        if (live && !cancelled) {
-          setStep((cur) => (cur.type === "idle" ? { type: "job", job: live } : cur));
-        }
+        if (live && !cancelled) setJob((cur) => cur ?? live);
       } catch {
         // Can't check — they can still start a new import.
       }
@@ -104,10 +105,10 @@ export function ChessResultsImportSection({
 
     const tick = async () => {
       try {
-        const job = await api.getImportJob(activeJobId);
+        const next = await api.getImportJob(activeJobId);
         if (cancelled) return;
-        setStep({ type: "job", job });
-        if (isTerminal(job)) return;
+        setJob(next);
+        if (isTerminal(next)) return;
       } catch {
         // A failed poll is usually a blip in signal. The job is unaffected by
         // our connection, so keep trying rather than declaring it dead.
@@ -122,121 +123,43 @@ export function ChessResultsImportSection({
     };
   }, [activeJobId]);
 
-  // ── Search ──────────────────────────────────────────────────────────────────
+  // ── Actions ─────────────────────────────────────────────────────────────────
 
-  async function handleSearch() {
-    setSearchError(null);
-
-    // A known FIDE ID always wins over the inputs — the field isn't rendered in
-    // that case, so its state is not something to trust.
-    const params = hasKnownFideId
-      ? { fide_id: fideId!.trim() }
-      : searchMode === "fide_id"
-        ? { fide_id: fideInput.trim() }
-        : { q: nameInput.trim() };
-
-    if (!Object.values(params)[0]) return;
-    setStep({ type: "searching" });
-
-    try {
-      const { results } = await api.searchChessResultsPlayer(params);
-      if (results.length === 0) {
-        setStep({ type: "idle" });
-        setSearchError("No players found. Try a different name or check the FIDE ID.");
-      } else if (results.length === 1) {
-        // Only one person it could be — don't make them confirm it.
-        await selectCandidate(results[0]);
-      } else {
-        setStep({ type: "selecting-player", candidates: results });
-      }
-    } catch (err) {
-      setStep({ type: "idle" });
-      setSearchError(userMessage(err, "Search failed. Try again."));
-    }
-  }
-
-  // The fork in the flow. A player with a FIDE ID can be imported whole in one
-  // request, which is fast enough that asking "all of them, or which ones?"
-  // would be asking someone to optimise something that no longer costs
-  // anything. Without an ID there is nothing to look them up by in the game
-  // database, so those players still go through the tournament list — and
-  // matching a scout target on surname alone would risk importing a namesake's
-  // games, which is worse than being slow.
-  async function selectCandidate(candidate: ChessResultsPlayerCandidate) {
-    if (candidate.fide_id) {
-      await importCareer(candidate.fide_id, candidate.name);
-    } else {
-      await loadTournaments(candidate.cr_id, candidate.name);
-    }
-  }
-
-  async function importCareer(fideId: string, name: string) {
-    setStep({ type: "starting", name });
+  async function startImport(id: string) {
+    if (!id) return;
+    setError(null);
     setJobError(null);
+    setStarting(true);
     try {
-      const job = await api.createCareerImportJob(slug, fideId, notifyEmail);
-      setStep({ type: "job", job });
+      setJob(await api.createCareerImportJob(slug, id, notifyEmail));
     } catch (err) {
-      setStep({ type: "idle" });
-      setSearchError(userMessage(err, "Could not start the import."));
+      setError(userMessage(err, "Could not start the import."));
+    } finally {
+      setStarting(false);
     }
   }
 
-  async function loadTournaments(crId: string, name: string) {
-    setStep({ type: "loading-tournaments", name });
+  async function findByName() {
+    if (!nameInput.trim()) return;
+    setError(null);
+    setSearching(true);
     try {
-      const data = await api.getChessResultsTournaments(crId);
-      // Start empty: "Fetch all" is its own button, so someone who chose to
-      // pick tournaments meant to pick them.
-      setSelected(new Set());
-      setStep({
-        type: "choose-mode",
-        playerName: data.player_name || name,
-        tournaments: data.tournaments,
-      });
+      const found = await searchRatingList(nameInput.trim());
+      setCandidates(found);
+      if (found.length === 0) setError("No rated players found with that name.");
     } catch (err) {
-      setStep({ type: "idle" });
-      setSearchError(userMessage(err, "Could not load tournament list."));
+      setError(userMessage(err, "Search failed. Try again."));
+    } finally {
+      setSearching(false);
     }
   }
-
-  // ── Import ──────────────────────────────────────────────────────────────────
-
-  const startImport = useCallback(
-    async (toImport: ChessResultsTournamentOption[]) => {
-      // The caller decides what "these" means: everything for Fetch all, the
-      // ticked ones for the picker.
-      if (toImport.length === 0) return;
-      setJobError(null);
-      try {
-        const job = await api.createImportJob(
-          slug,
-          toImport.map((tt) => ({ name: tt.name, url: buildImportUrl(tt) })),
-          notifyEmail
-        );
-        setStep({ type: "job", job });
-      } catch (err) {
-        setJobError(userMessage(err, "Could not start the import."));
-      }
-    },
-    [slug, notifyEmail]
-  );
 
   async function cancelJob(jobId: string) {
     try {
-      const job = await api.cancelImportJob(jobId);
-      setStep({ type: "job", job });
+      setJob(await api.cancelImportJob(jobId));
     } catch (err) {
       setJobError(userMessage(err, "Could not cancel the import."));
     }
-  }
-
-  function toggle(key: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
   }
 
   const notifyRow = (
@@ -267,6 +190,9 @@ export function ChessResultsImportSection({
     </Pressable>
   );
 
+  const inputStyle = [st.input, { borderColor: t.border, color: t.text, backgroundColor: t.surface }];
+  const chosenId = knownFideId || fideInput.trim();
+
   return (
     <View style={[st.card, { borderColor: "rgba(26,58,107,0.35)", backgroundColor: "rgba(26,58,107,0.05)" }]}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 }}>
@@ -278,22 +204,31 @@ export function ChessResultsImportSection({
             Import OTB Games from Chess-Results
           </Text>
           <Text style={{ fontSize: 11, color: t.textMuted }}>
-            Fetch over-the-board tournament games
+            Every over-the-board game chess-results has for this player
           </Text>
         </View>
       </View>
 
-      {/* ── Search ─────────────────────────────────────────────────────────── */}
-      {(step.type === "idle" || step.type === "searching") && (
-        <View>
-          {hasKnownFideId ? (
-            // Nothing to type and nothing to choose: the ID is the identity, and
-            // an editable field here only invites importing another player's
-            // games onto this profile.
+      {job ? (
+        <JobProgress
+          job={job}
+          error={jobError}
+          onCancel={() => cancelJob(job.id)}
+          onReset={() => {
+            setJob(null);
+            setJobError(null);
+          }}
+          onViewProfile={() => navigation.navigate("PlayerDetail", { slug: playerRef })}
+        />
+      ) : (
+        <View style={{ gap: 10 }}>
+          {knownFideId ? (
+            // The ID is the identity. An editable field here only invites
+            // importing another player's games onto this profile.
             <View style={[st.knownIdRow, { borderColor: t.border, backgroundColor: t.surface }]}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, color: t.textMuted }}>Searching by FIDE ID</Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: t.text }}>{fideId}</Text>
+                <Text style={{ fontSize: 11, color: t.textMuted }}>FIDE ID</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: t.text }}>{knownFideId}</Text>
               </View>
               <View style={st.fromProfileBadge}>
                 <Text style={{ fontSize: 10, fontWeight: "600", color: "#047857" }}>From profile</Text>
@@ -301,310 +236,75 @@ export function ChessResultsImportSection({
             </View>
           ) : (
             <>
-              <View style={[st.modeTabs, { backgroundColor: t.elevated }]}>
-                {(["fide_id", "name"] as const).map((mode) => (
-                  <Pressable
-                    key={mode}
-                    onPress={() => {
-                      setSearchMode(mode);
-                      setSearchError(null);
-                    }}
-                    style={[st.modeTab, searchMode === mode ? { backgroundColor: t.surface } : null]}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: "600",
-                        color: searchMode === mode ? t.text : t.textMuted,
-                      }}
-                    >
-                      {mode === "fide_id" ? "By FIDE ID" : "By Name"}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
               <TextInput
-                value={searchMode === "fide_id" ? fideInput : nameInput}
-                onChangeText={searchMode === "fide_id" ? setFideInput : setNameInput}
-                placeholder={searchMode === "fide_id" ? "e.g. 1503014" : "e.g. Timothy Mwabu"}
+                value={fideInput}
+                onChangeText={setFideInput}
+                keyboardType="number-pad"
+                placeholder="FIDE ID, e.g. 1503014"
                 placeholderTextColor={t.textFaint}
-                style={[
-                  st.input,
-                  { borderColor: t.border, color: t.text, backgroundColor: t.surface, marginTop: 10 },
-                ]}
+                style={inputStyle}
               />
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TextInput
+                  value={nameInput}
+                  onChangeText={setNameInput}
+                  onSubmitEditing={findByName}
+                  placeholder="Or find them by name"
+                  placeholderTextColor={t.textFaint}
+                  style={[...inputStyle, { flex: 1 }]}
+                />
+                <Pressable
+                  onPress={findByName}
+                  disabled={searching || !nameInput.trim()}
+                  style={[st.submitBtn, { backgroundColor: CR_COLOR, paddingHorizontal: 14 }]}
+                >
+                  {searching ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Find</Text>
+                  )}
+                </Pressable>
+              </View>
+              {candidates?.map((c) => (
+                <Pressable
+                  key={c.fideId}
+                  onPress={() => {
+                    setFideInput(c.fideId);
+                    setCandidates(null);
+                  }}
+                  style={[st.knownIdRow, { borderColor: t.border, backgroundColor: t.surface }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: t.text }}>{c.fullName}</Text>
+                    <Text style={{ fontSize: 11, color: t.textMuted }}>
+                      {[c.federation, `FIDE ${c.fideId}`, c.standardRating && `Elo ${c.standardRating}`]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: CR_COLOR }}>Use →</Text>
+                </Pressable>
+              ))}
             </>
           )}
 
-          {searchError && <Text style={{ color: t.danger, fontSize: 12, marginTop: 8 }}>{searchError}</Text>}
+          {notifyRow}
+
+          {error && <Text style={{ color: t.danger, fontSize: 12 }}>{error}</Text>}
 
           <Pressable
-            onPress={handleSearch}
-            disabled={
-              step.type === "searching" ||
-              (!hasKnownFideId && (searchMode === "fide_id" ? !fideInput.trim() : !nameInput.trim()))
-            }
-            style={[
-              st.submitBtn,
-              { backgroundColor: CR_COLOR, marginTop: 12, opacity: step.type === "searching" ? 0.7 : 1 },
-            ]}
+            onPress={() => startImport(chosenId)}
+            disabled={starting || !chosenId}
+            style={[st.submitBtn, { backgroundColor: CR_COLOR, opacity: starting || !chosenId ? 0.6 : 1 }]}
           >
-            {step.type === "searching" ? (
+            {starting ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Search Games</Text>
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Import all games</Text>
             )}
           </Pressable>
         </View>
       )}
-
-      {/* ── Pick the right player ──────────────────────────────────────────── */}
-      {step.type === "selecting-player" && (
-        <View style={{ gap: 8 }}>
-          <Pressable onPress={() => setStep({ type: "idle" })}>
-            <Text style={{ fontSize: 12, color: t.textMuted }}>← Search again</Text>
-          </Pressable>
-          {step.candidates.map((c) => (
-            <Pressable
-              key={c.cr_id}
-              onPress={() => selectCandidate(c)}
-              style={[st.candidateRow, { borderColor: t.border, backgroundColor: t.surface }]}
-            >
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  {c.title && (
-                    <View style={st.titleBadge}>
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: "#92400e" }}>{c.title}</Text>
-                    </View>
-                  )}
-                  <Text style={{ fontWeight: "600", color: t.text, fontSize: 13 }}>{c.name}</Text>
-                </View>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 3 }}>
-                  {c.federation && <Text style={{ fontSize: 11, color: t.textFaint }}>{c.federation}</Text>}
-                  {c.fide_id && <Text style={{ fontSize: 11, color: t.textFaint }}>FIDE {c.fide_id}</Text>}
-                  {c.rating && <Text style={{ fontSize: 11, color: t.textFaint }}>Elo {c.rating}</Text>}
-                </View>
-              </View>
-              <Text style={{ fontSize: 11, color: CR_COLOR, fontWeight: "600" }}>Select →</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-
-      {(step.type === "loading-tournaments" || step.type === "starting") && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10 }}>
-          <ActivityIndicator size="small" color={CR_COLOR} />
-          <Text style={{ fontSize: 12, color: t.textMuted }}>
-            {step.type === "starting"
-              ? `Fetching games for ${step.name}…`
-              : `Loading tournaments for ${step.name}…`}
-          </Text>
-        </View>
-      )}
-
-      {/* ── All, or pick ───────────────────────────────────────────────────── */}
-      {step.type === "choose-mode" && (
-        <View style={{ gap: 10 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Pressable onPress={() => setStep({ type: "idle" })}>
-              <Text style={{ fontSize: 12, color: t.textMuted }}>← Back</Text>
-            </Pressable>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: t.text }}>
-              {step.tournaments.length} found
-            </Text>
-          </View>
-
-          {step.tournaments.length === 0 ? (
-            <Text style={{ textAlign: "center", fontSize: 12, color: t.textFaint, paddingVertical: 16 }}>
-              No tournaments found for this player.
-            </Text>
-          ) : (
-            <>
-              <ModeCards
-                active={null}
-                count={step.tournaments.length}
-                onFetchAll={() => startImport(step.tournaments)}
-                onChoose={() =>
-                  setStep({
-                    type: "selecting-tournaments",
-                    playerName: step.playerName,
-                    tournaments: step.tournaments,
-                  })
-                }
-              />
-              {notifyRow}
-            </>
-          )}
-        </View>
-      )}
-
-      {/* ── Pick specific tournaments ──────────────────────────────────────── */}
-      {step.type === "selecting-tournaments" && (
-        <View style={{ gap: 10 }}>
-          {/* The cards stay put with the highlight on the active choice, so it
-              is obvious which mode you are in and switching back is one tap. */}
-          <ModeCards
-            active="choose"
-            count={step.tournaments.length}
-            onFetchAll={() => startImport(step.tournaments)}
-            onChoose={() => {}}
-          />
-
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Pressable
-              onPress={() =>
-                setStep({
-                  type: "choose-mode",
-                  playerName: step.playerName,
-                  tournaments: step.tournaments,
-                })
-              }
-            >
-              <Text style={{ fontSize: 12, color: t.textMuted }}>← Back</Text>
-            </Pressable>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <Pressable
-                onPress={() =>
-                  setSelected(new Set(step.tournaments.map((tt) => `${tt.tnr}-${tt.snr}`)))
-                }
-              >
-                <Text style={{ fontSize: 12, color: t.textMuted }}>Select all</Text>
-              </Pressable>
-              <Pressable onPress={() => setSelected(new Set())}>
-                <Text style={{ fontSize: 12, color: t.textMuted }}>Clear</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/*
-            The list scrolls inside itself. Magnus Carlsen has 250-odd events,
-            and letting them all flow into the page ScrollView buried the
-            checkbox and the Import button under a quarter-mile of rows.
-          */}
-          <ScrollView
-            style={{ maxHeight: 320 }}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ gap: 6, paddingVertical: 2 }}
-          >
-            {step.tournaments.map((tt) => {
-              const key = `${tt.tnr}-${tt.snr}`;
-              const checked = selected.has(key);
-              return (
-                <Pressable
-                  key={key}
-                  onPress={() => toggle(key)}
-                  style={[
-                    st.tournRow,
-                    checked
-                      ? { borderColor: CR_COLOR, backgroundColor: "rgba(26,58,107,0.08)" }
-                      : { borderColor: t.border, backgroundColor: t.surface },
-                  ]}
-                >
-                  <Ionicons
-                    name={checked ? "checkbox" : "square-outline"}
-                    size={18}
-                    color={checked ? CR_COLOR : t.textFaint}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: t.text }}>{tt.name}</Text>
-                    <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 2 }}>
-                      {[tt.year, tt.location].filter(Boolean).join(" · ") || "No date/location info"}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {notifyRow}
-
-          <Pressable
-            onPress={() =>
-              startImport(step.tournaments.filter((tt) => selected.has(`${tt.tnr}-${tt.snr}`)))
-            }
-            disabled={selected.size === 0}
-            style={[st.submitBtn, { backgroundColor: CR_COLOR, opacity: selected.size === 0 ? 0.5 : 1 }]}
-          >
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
-              Import{" "}
-              {selected.size > 0
-                ? `${selected.size} tournament${selected.size !== 1 ? "s" : ""}`
-                : "selected"}
-            </Text>
-          </Pressable>
-          <Text style={{ fontSize: 11, color: t.textFaint, textAlign: "center" }}>
-            {selected.size} of {step.tournaments.length} selected
-          </Text>
-        </View>
-      )}
-
-      {/* ── The job ────────────────────────────────────────────────────────── */}
-      {step.type === "job" && (
-        <JobProgress
-          job={step.job}
-          error={jobError}
-          onCancel={() => cancelJob(step.job.id)}
-          onReset={() => {
-            setStep({ type: "idle" });
-            setJobError(null);
-          }}
-          onViewProfile={() => navigation.navigate("PlayerDetail", { slug: playerRef })}
-        />
-      )}
-    </View>
-  );
-}
-
-// ── Mode cards ───────────────────────────────────────────────────────────────
-
-/**
- * The two ways in, shown in both steps so the highlight can move to whichever
- * you picked. A permanently-highlighted "Fetch all" while you were busy
- * ticking boxes said the wrong thing about where you were.
- */
-function ModeCards({
-  active,
-  count,
-  onFetchAll,
-  onChoose,
-}: {
-  active: "all" | "choose" | null;
-  count: number;
-  onFetchAll: () => void;
-  onChoose: () => void;
-}) {
-  const t = useTheme();
-
-  const card = (isActive: boolean) => [
-    st.modeCard,
-    isActive
-      ? { borderColor: CR_COLOR, backgroundColor: "rgba(26,58,107,0.08)" }
-      : { borderColor: t.border, backgroundColor: t.surface },
-  ];
-
-  return (
-    <View style={{ gap: 8 }}>
-      <Pressable onPress={onFetchAll} style={card(active === "all")}>
-        <Text style={{ fontSize: 20 }}>♞</Text>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: t.text, marginTop: 4 }}>
-          Fetch all tournaments
-        </Text>
-        <Text style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
-          Import all {count} events. Best for a new player.
-        </Text>
-      </Pressable>
-
-      <Pressable onPress={onChoose} style={card(active === "choose")}>
-        <Text style={{ fontSize: 20 }}>♟</Text>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: t.text, marginTop: 4 }}>
-          Choose tournaments
-        </Text>
-        <Text style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
-          Pick exactly which events to bring in.
-        </Text>
-      </Pressable>
     </View>
   );
 }
@@ -709,7 +409,7 @@ function JobProgress({
       )}
 
       {job.cancel_requested && !finished && (
-        <Text style={{ fontSize: 11, color: t.textFaint }}>Stopping after the current tournament…</Text>
+        <Text style={{ fontSize: 11, color: t.textFaint }}>Stopping…</Text>
       )}
 
       {error && <Text style={{ fontSize: 11, color: t.danger }}>{error}</Text>}
@@ -778,18 +478,12 @@ function JobProgress({
 const st = StyleSheet.create({
   card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 16 },
   iconBox: { height: 36, width: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  modeTabs: { flexDirection: "row", borderRadius: 8, padding: 3, gap: 3 },
-  modeTab: { flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 6 },
   input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 14 },
   submitBtn: { borderRadius: 10, paddingVertical: 12, alignItems: "center" },
-  candidateRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 12 },
-  titleBadge: { backgroundColor: "#fef3c7", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-  tournRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 10 },
   doneBanner: { borderRadius: 10, padding: 12 },
   progressRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 10 },
   knownIdRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 12 },
   fromProfileBadge: { backgroundColor: "rgba(16,185,129,0.15)", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
-  modeCard: { borderWidth: 2, borderRadius: 12, padding: 14 },
   notifyRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 12 },
   queuedRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 12 },
 });

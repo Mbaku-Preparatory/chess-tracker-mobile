@@ -69,16 +69,6 @@ export const GetPlayerQuery = (slug: string) => `
         gamesCount
         scorePercent
       }
-      strengths {
-        title
-        description
-        order
-      }
-      weaknesses {
-        title
-        description
-        order
-      }
       recentGames {
         id
         event
@@ -98,24 +88,6 @@ export const GetPlayerQuery = (slug: string) => `
         chessCom
         lichess
       }
-    }
-  }
-`;
-
-export const CreatePlayerMutation = (fullName: string) => `
-  mutation {
-    createPlayer(fullName: "${fullName}") {
-      id
-      fullName
-      slug
-    }
-  }
-`;
-
-export const DeletePlayerMutation = (slug: string) => `
-  mutation {
-    deletePlayer(slug: "${slug}") {
-      ok
     }
   }
 `;

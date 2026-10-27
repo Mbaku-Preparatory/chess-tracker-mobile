@@ -71,16 +71,6 @@ const fetchPlayerDetailFromGraphQL = async (action: any) => {
               games_count: o.gamesCount,
               score_percent: o.scorePercent,
             })),
-            strengths: (p.strengths ?? []).map((s: Record<string, unknown>) => ({
-              title: s.title,
-              description: s.description,
-              order: s.order,
-            })),
-            weaknesses: (p.weaknesses ?? []).map((w: Record<string, unknown>) => ({
-              title: w.title,
-              description: w.description,
-              order: w.order,
-            })),
             recent_games: (p.recentGames ?? []).map(mapGame),
             game_source_counts: p.gameSourceCounts ? {
               chess_results: p.gameSourceCounts.chessResults,

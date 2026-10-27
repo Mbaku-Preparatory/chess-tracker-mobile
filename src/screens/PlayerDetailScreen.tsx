@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PerformanceSplitCard } from "@/components/players/PerformanceSplitCard";
 import { OpeningBreakdownCard } from "@/components/players/OpeningBreakdownCard";
-import { StrengthWeaknessCard } from "@/components/players/StrengthWeaknessCard";
 import { GamesTable } from "@/components/players/GamesTable";
 import type { RootStackParamList } from "@/navigation/types";
 import { userMessage } from "@/lib/apiError";
@@ -217,15 +216,6 @@ export function PlayerDetailScreen({ route, navigation }: Props) {
           <View style={{ gap: 10 }}>
             <OpeningBreakdownCard title="White Openings" openings={whiteOpenings} colorLabel="White" />
             <OpeningBreakdownCard title="Black Openings" openings={blackOpenings} colorLabel="Black" />
-          </View>
-        </SectionContainer>
-      )}
-
-      {(player.strengths.length > 0 || player.weaknesses.length > 0) && (
-        <SectionContainer title="Strengths & Weaknesses">
-          <View style={{ gap: 10 }}>
-            {player.strengths.length > 0 && <StrengthWeaknessCard items={player.strengths} type="strength" />}
-            {player.weaknesses.length > 0 && <StrengthWeaknessCard items={player.weaknesses} type="weakness" />}
           </View>
         </SectionContainer>
       )}

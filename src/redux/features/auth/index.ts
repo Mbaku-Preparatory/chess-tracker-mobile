@@ -2,8 +2,6 @@ import { authStorage } from "@/lib/auth";
 import {
   CLEAR_AUTH,
   LOAD_AUTH,
-  LOGIN,
-  REGISTER,
   SET_AUTH,
   SET_PROFILE_PIC,
 } from "@/redux/actions/actionTypes";
@@ -14,8 +12,6 @@ interface AuthState {
   email: string | null;
   profilePic: string | null;
   initialized: boolean;
-  loading: boolean;
-  error: string | null;
 }
 
 const initialState: AuthState = {
@@ -24,8 +20,6 @@ const initialState: AuthState = {
   email: null,
   profilePic: null,
   initialized: false,
-  loading: false,
-  error: null,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,27 +54,6 @@ const authReducer = (state = initialState, action: any): AuthState => {
     case CLEAR_AUTH:
       authStorage.clear();
       return { ...initialState, initialized: true };
-
-    case LOGIN + "_pending":
-    case REGISTER + "_pending":
-      return { ...state, loading: true, error: null };
-
-    case LOGIN:
-    case REGISTER:
-      if (action.errors) {
-        return { ...state, loading: false, error: String(action.errors) };
-      }
-      authStorage.setToken(action.payload.token);
-      if (action.payload.refreshToken) authStorage.setRefreshToken(action.payload.refreshToken);
-      authStorage.setEmail(action.payload.email);
-      return {
-        ...state,
-        loading: false,
-        token: action.payload.token,
-        refreshToken: action.payload.refreshToken ?? state.refreshToken,
-        email: action.payload.email,
-        initialized: true,
-      };
 
     default:
       return state;
