@@ -18,21 +18,6 @@ function usePulse() {
   return opacity;
 }
 
-export function LoadingSkeleton({ lines = 3 }: { lines?: number }) {
-  const t = useTheme();
-  const opacity = usePulse();
-  return (
-    <Animated.View style={{ opacity, gap: 10 }}>
-      {Array.from({ length: lines }).map((_, i) => (
-        <View
-          key={i}
-          style={[st.line, { backgroundColor: t.elevated, width: `${85 - i * 15}%` }]}
-        />
-      ))}
-    </Animated.View>
-  );
-}
-
 export function CardSkeleton() {
   const t = useTheme();
   const opacity = usePulse();

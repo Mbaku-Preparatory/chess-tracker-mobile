@@ -182,7 +182,7 @@ export default function MyProfileScreen({ navigation }: Props) {
       {!player.fide_id && (
         <SectionContainer title="Connect your FIDE ID">
           <Text style={{ color: t.textMuted, fontSize: 13, marginBottom: 10 }}>
-            Add it and we&apos;ll pull in your rating and your recent tournament
+            Add it and we&apos;ll pull in your rating and your tournament
             games. Mbaku can only talk about play it can see.
           </Text>
           <TextField
@@ -221,9 +221,9 @@ export default function MyProfileScreen({ navigation }: Props) {
       {!inFlight && job && job.games_imported === 0 && !!player.fide_id && (
         <SectionContainer title="No games found">
           <Text style={{ color: t.textMuted, fontSize: 13 }}>
-            We couldn&apos;t find tournaments for FIDE ID {player.fide_id} on
-            chess-results. That usually means your events aren&apos;t published
-            there — your rating above is still from FIDE.
+            We couldn&apos;t find games for FIDE ID {player.fide_id} on
+            chess-results. That usually means your events&apos; games
+            aren&apos;t published there — your rating above is still from FIDE.
           </Text>
           <Button
             title="Try again"
@@ -242,21 +242,21 @@ export default function MyProfileScreen({ navigation }: Props) {
           somebody whose import found nothing is the exact person who needs to
           retry, and gating it left them a dead end. */}
       {!!player.fide_id && !inFlight && (
-        <SectionContainer title={gamesCount > 0 ? "Older games" : "Fetch your games"}>
+        <SectionContainer title={gamesCount > 0 ? "New games" : "Fetch your games"}>
           <Text style={{ color: t.textMuted, fontSize: 13 }}>
             {gamesCount > 0
-              ? "Signing up imported your 20 most recent tournaments. If you have played longer than that, pull in the rest."
-              : "Search chess-results for every tournament under your FIDE ID and import the games."}
+              ? "Played since your last import? Fetch again to pull in new games from chess-results."
+              : "Fetch every game chess-results has under your FIDE ID."}
           </Text>
           <Button
-            title={saving ? "Starting…" : gamesCount > 0 ? "Import my full history" : "Import my games"}
+            title={saving ? "Starting…" : gamesCount > 0 ? "Fetch new games" : "Import my games"}
             variant="secondary"
             disabled={saving}
             onPress={async () => {
               if (!player.fide_id) return;
               setSaving(true);
               try {
-                setMe(await api.setMyFideId(player.fide_id, true));
+                setMe(await api.setMyFideId(player.fide_id));
               } catch (err) {
                 setError(userMessage(err, "Couldn't start the import."));
               } finally {

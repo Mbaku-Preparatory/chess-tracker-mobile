@@ -1,6 +1,5 @@
 import type { PlayerDetail } from "@/types";
 import {
-  CLEAR_PLAYER_DETAIL,
   FETCH_PLAYER_DETAIL,
   FETCH_PLAYER_DETAIL_PENDING,
 } from "@/redux/actions/actionTypes";
@@ -28,9 +27,6 @@ const playerDetailReducer = (state = initialState, action: any): PlayerDetailSta
         return { ...state, loading: false, error: String(action.errors) };
       }
       return { ...state, loading: false, player: action.payload.player };
-
-    case CLEAR_PLAYER_DETAIL:
-      return { ...state, player: null, error: null };
 
     default:
       return state;

@@ -269,8 +269,3 @@ const BY_CODE = new Map(FEDERATIONS.map((f) => [f.code, f]));
 export function federationFor(code: string): Federation {
   return BY_CODE.get(code) ?? { code, name: code, flag: "" };
 }
-
-/** Sorted by name, so a picker reads alphabetically rather than by code. */
-export function federationsFor(codes: string[]): Federation[] {
-  return codes.map(federationFor).sort((a, b) => a.name.localeCompare(b.name));
-}

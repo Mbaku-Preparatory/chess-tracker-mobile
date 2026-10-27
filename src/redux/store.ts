@@ -1,15 +1,12 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import authReducer from "./features/auth";
-import gamesReducer from "./features/games";
 import playerDetailReducer from "./features/playerDetail";
 import playersReducer from "./features/players";
 import prepSessionsReducer from "./features/prepSessions";
 import themeReducer from "./features/theme";
 
 import {
-  authMiddleware,
-  gamesMiddleware,
   playerDetailMiddleware,
   playersMiddleware,
   prepSessionsMiddleware,
@@ -20,16 +17,13 @@ export const store = configureStore({
     auth: authReducer,
     players: playersReducer,
     playerDetail: playerDetailReducer,
-    games: gamesReducer,
     prepSessions: prepSessionsReducer,
     theme: themeReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false }).concat(
-      authMiddleware,
       playersMiddleware,
       playerDetailMiddleware,
-      gamesMiddleware,
       prepSessionsMiddleware,
     ),
 });
