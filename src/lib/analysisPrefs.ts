@@ -12,10 +12,9 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
  */
 export interface AnalysisPrefs {
   engine: boolean;
-  sound: boolean;
 }
 
-export const DEFAULT_PREFS: AnalysisPrefs = { engine: false, sound: true };
+export const DEFAULT_PREFS: AnalysisPrefs = { engine: false };
 
 const KEY = "analysis-prefs";
 const listeners = new Set<() => void>();
@@ -33,7 +32,6 @@ async function load() {
     const stored = JSON.parse((await AsyncStorage.getItem(KEY)) ?? "{}");
     current = {
       engine: typeof stored.engine === "boolean" ? stored.engine : DEFAULT_PREFS.engine,
-      sound: typeof stored.sound === "boolean" ? stored.sound : DEFAULT_PREFS.sound,
     };
     emit();
   } catch {
