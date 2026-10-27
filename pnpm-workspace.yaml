@@ -7,5 +7,11 @@
 # binary, which the platform package @sentry/cli-linux-x64 already provides —
 # so this approval is about letting the install finish, not about needing the
 # script to do anything.
+#
+# @shopify/react-native-skia's postinstall copies its prebuilt native libraries
+# into libs/. Skipped, the Android build fails with "Skia prebuilt binaries not
+# found" (it did on 2026-10-27, after a clean install): the approval for it sat
+# in .npmrc, which pnpm does not read for this setting.
 onlyBuiltDependencies:
   - '@sentry/cli'
+  - '@shopify/react-native-skia'
