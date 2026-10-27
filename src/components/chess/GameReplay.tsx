@@ -20,7 +20,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/lib/api";
 import { formatScore, pvToSan, useEngine, type EngineResult } from "@/hooks/useEngine";
 import { useAnalysisPrefs } from "@/lib/analysisPrefs";
-import { playSound, soundFor } from "@/lib/chessSounds";
 import { useTheme } from "@/theme/ThemeContext";
 import Svg, { Circle, Path } from "react-native-svg";
 
@@ -177,29 +176,20 @@ function NavBtn({ icon, disabled, onPress, color }: { icon: keyof typeof Ionicon
   );
 }
 
-/** The engine switch, the sound switch, and Lichess's best lines. */
+/** The engine switch and Lichess's best lines. */
 function EnginePanel({ engine, fen }: { engine: EngineResult; fen: string }) {
   const t = useTheme();
   const [prefs, setPrefs] = useAnalysisPrefs();
   return (
     <View style={[st.enginePanel, { backgroundColor: t.surface, borderColor: t.border }]}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Switch
-            value={prefs.engine}
-            onValueChange={(engineOn) => setPrefs({ engine: engineOn })}
-            trackColor={{ true: t.brand(600), false: t.border }}
-            accessibilityLabel="Engine"
-          />
-          <Text style={{ fontSize: 14, fontWeight: "700", color: t.text }}>Engine</Text>
-        </View>
-        <Pressable
-          onPress={() => setPrefs({ sound: !prefs.sound })}
-          accessibilityLabel={prefs.sound ? "Mute move sounds" : "Turn move sounds on"}
-          hitSlop={8}
-        >
-          <Ionicons name={prefs.sound ? "volume-medium-outline" : "volume-mute-outline"} size={20} color={t.textMuted} />
-        </Pressable>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Switch
+          value={prefs.engine}
+          onValueChange={(engineOn) => setPrefs({ engine: engineOn })}
+          trackColor={{ true: t.brand(600), false: t.border }}
+          accessibilityLabel="Engine"
+        />
+        <Text style={{ fontSize: 14, fontWeight: "700", color: t.text }}>Engine</Text>
       </View>
       {prefs.engine ? (
         <View style={{ gap: 6, marginTop: 8 }}>
@@ -278,17 +268,6 @@ export function GameReplay({
   const [prefs] = useAnalysisPrefs();
   const engine = useEngine(currentFen, prefs.engine && !loading);
   const bestLine = engine.lines[0] ?? null;
-
-  // A sound for the move arrived at, however it was reached.
-  const finished = resultTag === "1-0" || resultTag === "0-1" || resultTag === "1/2-1/2";
-  const soundedIndex = useRef(currentIndex);
-  useEffect(() => {
-    const previous = soundedIndex.current;
-    soundedIndex.current = currentIndex;
-    if (!prefs.sound || currentIndex === previous || currentIndex < 0) return;
-    const lastOfGame = finished && !line.inBranch && currentIndex === gameMoves.length - 1;
-    playSound(soundFor(moves[currentIndex].san, lastOfGame));
-  }, [currentIndex, moves, prefs.sound, finished, line.inBranch, gameMoves.length]);
 
   // The board keeps its own position — its `fen` prop is only a starting one —
   // so ours has to be pushed in whenever it changes. Two things make that
