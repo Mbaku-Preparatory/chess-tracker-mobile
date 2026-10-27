@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
-  Modal,
   Pressable,
   ScrollView,
   Share,
   StyleSheet,
+  Switch,
   Text,
   View,
   useWindowDimensions,
@@ -18,7 +18,9 @@ import * as Sharing from "expo-sharing";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/lib/api";
-import { useStockfish } from "@/hooks/useStockfish";
+import { formatScore, pvToSan, useEngine, type EngineResult } from "@/hooks/useEngine";
+import { useAnalysisPrefs } from "@/lib/analysisPrefs";
+import { playSound, soundFor } from "@/lib/chessSounds";
 import { useTheme } from "@/theme/ThemeContext";
 import { useAnalysisLine } from "./useAnalysisLine";
 import Chessboard, { type ChessboardRef } from "react-native-chessboard";
@@ -172,13 +174,76 @@ function NavBtn({ icon, disabled, onPress, color }: { icon: keyof typeof Ionicon
   );
 }
 
+/** The engine switch, the sound switch, and Lichess's best lines. */
+function EnginePanel({ engine, fen }: { engine: EngineResult; fen: string }) {
+  const t = useTheme();
+  const [prefs, setPrefs] = useAnalysisPrefs();
+  return (
+    <View style={[st.enginePanel, { backgroundColor: t.surface, borderColor: t.border }]}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Switch
+            value={prefs.engine}
+            onValueChange={(engineOn) => setPrefs({ engine: engineOn })}
+            trackColor={{ true: t.brand(600), false: t.border }}
+            accessibilityLabel="Engine"
+          />
+          <Text style={{ fontSize: 14, fontWeight: "700", color: t.text }}>Engine</Text>
+        </View>
+        <Pressable
+          onPress={() => setPrefs({ sound: !prefs.sound })}
+          accessibilityLabel={prefs.sound ? "Mute move sounds" : "Turn move sounds on"}
+          hitSlop={8}
+        >
+          <Ionicons name={prefs.sound ? "volume-medium-outline" : "volume-mute-outline"} size={20} color={t.textMuted} />
+        </Pressable>
+      </View>
+      {prefs.engine ? (
+        <View style={{ gap: 6, marginTop: 8 }}>
+          {engine.isAnalyzing && <ActivityIndicator size="small" color={t.textMuted} style={{ alignSelf: "flex-start" }} />}
+          {engine.lines.map((line, i) => {
+            const whiteBetter = (line.mate ?? line.score ?? 0) >= 0;
+            return (
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View style={[st.scorePill, { backgroundColor: whiteBetter ? "#ffffff" : "#262626", borderColor: t.border }]}>
+                  <Text style={{ fontSize: 11, fontWeight: "800", fontFamily: "monospace", color: whiteBetter ? "#171717" : "#ffffff" }}>
+                    {formatScore(line.score, line.mate)}
+                  </Text>
+                </View>
+                <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, fontFamily: "monospace", color: t.textMuted }}>
+                  {pvToSan(fen, line.pv)}
+                </Text>
+              </View>
+            );
+          })}
+          {!engine.isAnalyzing && engine.lines.length === 0 && (
+            <Text style={{ fontSize: 12, color: t.textFaint }}>Lichess has no evaluation for this position.</Text>
+          )}
+          {engine.source === "lichess" && (
+            <Text style={{ fontSize: 11, color: t.textFaint }}>Depth {engine.depth} · Lichess cloud</Text>
+          )}
+        </View>
+      ) : (
+        <Text style={{ fontSize: 12, color: t.textFaint, marginTop: 6 }}>
+          Off. Turn it on for the evaluation and best lines, from Lichess&apos;s cloud analysis.
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * A game on its own screen: the board, the engine (off until switched on), the
+ * moves and ways out to Chess.com, Lichess or a PGN file. A stack screen, not
+ * a modal, so Android's back button and iOS's swipe-back leave it.
+ */
 export function GameReplay({
   pgn,
   loading,
   error,
   orientation = "white",
   header,
-  onClose,
+  onBack,
   filename,
   players,
   scores,
@@ -188,7 +253,7 @@ export function GameReplay({
   error?: string | null;
   orientation?: "white" | "black";
   header: React.ReactNode;
-  onClose: () => void;
+  onBack: () => void;
   filename: string;
   /** Used only for sides the PGN itself does not name. */
   players?: { white?: SidePlayer; black?: SidePlayer };
@@ -207,7 +272,20 @@ export function GameReplay({
   const line = useAnalysisLine(gameMoves);
   const { moves, index: currentIndex, fen: currentFen, goTo } = line;
 
-  const engine = useStockfish(currentFen, !loading && moves.length >= 0);
+  const [prefs] = useAnalysisPrefs();
+  const engine = useEngine(currentFen, prefs.engine && !loading);
+  const bestLine = engine.lines[0] ?? null;
+
+  // A sound for the move arrived at, however it was reached.
+  const finished = resultTag === "1-0" || resultTag === "0-1" || resultTag === "1/2-1/2";
+  const soundedIndex = useRef(currentIndex);
+  useEffect(() => {
+    const previous = soundedIndex.current;
+    soundedIndex.current = currentIndex;
+    if (!prefs.sound || currentIndex === previous || currentIndex < 0) return;
+    const lastOfGame = finished && !line.inBranch && currentIndex === gameMoves.length - 1;
+    playSound(soundFor(moves[currentIndex].san, lastOfGame));
+  }, [currentIndex, moves, prefs.sound, finished, line.inBranch, gameMoves.length]);
 
   // The board keeps its own position — its `fen` prop is only a starting one —
   // so ours has to be pushed in whenever it changes. Two things make that
@@ -293,13 +371,12 @@ export function GameReplay({
   const top = orientation === "white" ? black : white;
 
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
       <View style={{ flex: 1, backgroundColor: t.bg }}>
-        <View style={[st.header, { borderColor: t.border }]}>
-          <View style={{ flex: 1 }}>{header}</View>
-          <Pressable onPress={onClose} style={st.closeBtn}>
-            <Ionicons name="close" size={22} color={t.textMuted} />
+        <View style={[st.header, { borderColor: t.border, paddingTop: insets.top + 8 }]}>
+          <Pressable onPress={onBack} style={st.backBtn} accessibilityLabel="Back" hitSlop={8}>
+            <Ionicons name="chevron-back" size={24} color={t.text} />
           </Pressable>
+          <View style={{ flex: 1 }}>{header}</View>
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
@@ -347,17 +424,23 @@ export function GameReplay({
               </View>
               {/* Under the board and both names, so it reads as a summary of
                   the position rather than as part of either player's plate. */}
-              <View style={{ paddingHorizontal: 12, paddingTop: 2 }}>
-                <EvalBar
-                  orientation="horizontal"
-                  score={engine.score}
-                  mate={engine.mate}
-                  depth={engine.depth}
-                  isAnalyzing={engine.isAnalyzing}
-                  source={engine.source}
-                />
-              </View>
+              {prefs.engine && (
+                <View style={{ paddingHorizontal: 12, paddingTop: 2 }}>
+                  <EvalBar
+                    orientation="horizontal"
+                    score={bestLine?.score ?? null}
+                    mate={bestLine?.mate ?? null}
+                    depth={engine.depth}
+                    isAnalyzing={engine.isAnalyzing}
+                    source={engine.source}
+                  />
+                </View>
+              )}
             </View>
+          </View>
+
+          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+            <EnginePanel engine={engine} fen={currentFen} />
           </View>
 
           <View style={st.moveListWrap}>
@@ -462,13 +545,14 @@ export function GameReplay({
           <NavBtn icon="play-skip-forward" disabled={currentIndex === moves.length - 1} onPress={() => goTo(moves.length - 1)} color={t.textMuted} />
         </View>
       </View>
-    </Modal>
   );
 }
 
 const st = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingTop: 56, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth },
-  closeBtn: { padding: 4 },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingBottom: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  backBtn: { paddingTop: 2 },
+  enginePanel: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12 },
+  scorePill: { minWidth: 54, alignItems: "center", borderRadius: 5, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 5, paddingVertical: 2 },
   boardArea: { alignItems: "center", paddingVertical: 16 },
   moveListWrap: { padding: 16 },
   backToGame: {

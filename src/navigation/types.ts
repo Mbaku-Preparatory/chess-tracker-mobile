@@ -1,5 +1,7 @@
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
+import type { Game, MasterGame } from "@/types";
+
 export type MainTabParamList = {
   Schedule: undefined;
   Players: undefined;
@@ -26,5 +28,8 @@ export type RootStackParamList = {
   SessionNew: undefined;
   SessionDetail: { id: number };
   MyProfile: undefined;
+  // The game travels with the route: every list that opens one already holds
+  // it, so the screen fetches only the PGN, and only for a scouted game.
+  GameAnalysis: { kind: "game"; game: Game } | { kind: "master"; game: MasterGame };
   Account: undefined;
 };

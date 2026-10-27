@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { gameRef } from "@/lib/gameRef";
@@ -8,7 +10,7 @@ import { useTheme } from "@/theme/ThemeContext";
 import { ColorBadge, EcoBadge, ResultBadge, SourceBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
-import { PgnViewerModal } from "./PgnViewerModal";
+import type { RootStackParamList } from "@/navigation/types";
 import type { Game } from "@/types";
 
 export function GamesTable({
@@ -21,7 +23,7 @@ export function GamesTable({
   onDeleted?: (gameId: string) => void;
 }) {
   const t = useTheme();
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // Keyed on public_id, which is what the delete call takes.
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -54,7 +56,7 @@ export function GamesTable({
     <>
       <View style={{ gap: 8 }}>
         {games.map((game) => (
-          <Pressable key={game.id} onPress={() => setSelectedGame(game)}>
+          <Pressable key={game.id} onPress={() => navigation.navigate("GameAnalysis", { kind: "game", game })}>
             <Card style={{ padding: 12 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -91,7 +93,6 @@ export function GamesTable({
         ))}
       </View>
 
-      {selectedGame && <PgnViewerModal game={selectedGame} onClose={() => setSelectedGame(null)} />}
     </>
   );
 }
