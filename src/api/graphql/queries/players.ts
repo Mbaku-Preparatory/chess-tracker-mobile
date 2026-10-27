@@ -1,10 +1,15 @@
+// Values are written into the query text, so each goes through JSON.stringify:
+// a JSON string is a valid GraphQL string, quotes and backslashes escaped. A
+// name typed with a quote in it used to end the string and break the query.
+const str = (value: string) => JSON.stringify(value);
+
 export const GetPlayersQuery = (
   search = "",
   page = 1,
   ordering = "-created_at"
 ) => `
   query {
-    players(search: "${search}", page: ${page}, ordering: "${ordering}") {
+    players(search: ${str(search)}, page: ${Math.max(1, Math.floor(page) || 1)}, ordering: ${str(ordering)}) {
       count
       results {
         id
@@ -33,7 +38,7 @@ export const GetPlayersQuery = (
 
 export const GetPlayerQuery = (slug: string) => `
   query {
-    player(slug: "${slug}") {
+    player(slug: ${str(slug)}) {
       id
       publicId
       fullName
