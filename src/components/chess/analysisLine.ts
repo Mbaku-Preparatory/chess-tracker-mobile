@@ -18,6 +18,10 @@ import type { ParsedMove } from "./GameReplay";
  * it; leaving the branch and playing elsewhere starts a new one. A tree needs a
  * tree view to be navigable, and a tree view on a phone is a worse way to read
  * a game than the single line people opened it for.
+ *
+ * The branch stays when you step back onto the game: like Chess.com, the move
+ * list shows the game and, under the move it replaced, the line you tried, and
+ * either can be clicked. `onBranch` says which of the two the board follows.
  */
 
 /** The position before any move. */
@@ -33,17 +37,24 @@ export interface Branch {
 }
 
 export interface LineState {
-  /** -1 is the starting position. */
+  /** -1 is the starting position. An index into `lineOf(state)`. */
   index: number;
   branch: Branch | null;
+  /** Following the branch rather than the game. */
+  onBranch: boolean;
 }
 
-export const INITIAL: LineState = { index: -1, branch: null };
+export const INITIAL: LineState = { index: -1, branch: null, onBranch: false };
 
 /** Main line, or main line up to the branch point followed by the branch. */
 export function movesOf(mainMoves: ParsedMove[], branch: Branch | null): ParsedMove[] {
   if (!branch) return mainMoves;
   return [...mainMoves.slice(0, branch.fromIndex + 1), ...branch.moves];
+}
+
+/** The line the board is following: the game, or the game into the branch. */
+export function lineOf(mainMoves: ParsedMove[], state: LineState): ParsedMove[] {
+  return state.onBranch ? movesOf(mainMoves, state.branch) : mainMoves;
 }
 
 /** Where the branch begins within `movesOf`, or null when there is none. */
@@ -76,7 +87,7 @@ export function playMove(
   from: string,
   to: string
 ): LineState | null {
-  const moves = movesOf(mainMoves, state.branch);
+  const moves = lineOf(mainMoves, state);
   const chess = new Chess(fenAt(moves, state.index));
 
   let played;
@@ -100,30 +111,29 @@ export function playMove(
   };
 
   const startsAt = branchStartsAt(state.branch);
-  const insideBranch = startsAt !== null && state.index >= startsAt;
+  const insideBranch = state.onBranch && startsAt !== null && state.index >= startsAt;
 
   // Playing the game's own next move is not a deviation — it just walks
   // forward. Without this, following a game by hand would fork the line at
   // every move and bury the score inside a branch identical to it.
   if (!insideBranch && mainMoves[state.index + 1]?.san === move.san) {
-    return { index: state.index + 1, branch: state.branch };
+    return { index: state.index + 1, branch: state.branch, onBranch: false };
   }
 
   if (state.branch && insideBranch) {
-    // A move from further back inside the branch replaces what followed it,
-    // which is what "take that back and try this instead" means.
     const keep = state.index - (startsAt as number) + 1;
+    // The branch's own next move, played by hand, walks forward the same way.
+    if (state.branch.moves[keep]?.san === move.san) {
+      return { ...state, index: state.index + 1 };
+    }
+    // A different move from further back inside the branch replaces what
+    // followed it, which is what "take that back and try this instead" means.
     return {
       index: state.index + 1,
       branch: { ...state.branch, moves: [...state.branch.moves.slice(0, keep), move] },
+      onBranch: true,
     };
   }
 
-  return { index: state.index + 1, branch: { fromIndex: state.index, moves: [move] } };
-}
-
-/** Drop the branch, landing on the move it left from. */
-export function clearBranch(state: LineState): LineState {
-  if (!state.branch) return state;
-  return { index: state.branch.fromIndex, branch: null };
+  return { index: state.index + 1, branch: { fromIndex: state.index, moves: [move] }, onBranch: true };
 }

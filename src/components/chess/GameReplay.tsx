@@ -22,6 +22,9 @@ import { formatScore, pvToSan, useEngine, type EngineResult } from "@/hooks/useE
 import { useAnalysisPrefs } from "@/lib/analysisPrefs";
 import { playSound, soundFor } from "@/lib/chessSounds";
 import { useTheme } from "@/theme/ThemeContext";
+import Svg, { Circle, Path } from "react-native-svg";
+
+import { MoveList } from "./MoveList";
 import { useAnalysisLine } from "./useAnalysisLine";
 import Chessboard, { type ChessboardRef } from "react-native-chessboard";
 import { EvalBar } from "@/components/ui/EvalBar";
@@ -373,8 +376,9 @@ export function GameReplay({
   return (
       <View style={{ flex: 1, backgroundColor: t.bg }}>
         <View style={[st.header, { borderColor: t.border, paddingTop: insets.top + 8 }]}>
-          <Pressable onPress={onBack} style={st.backBtn} accessibilityLabel="Back" hitSlop={8}>
-            <Ionicons name="chevron-back" size={24} color={t.text} />
+          <Pressable onPress={onBack} style={[st.backBtn, { borderColor: t.brand(600) }]} accessibilityLabel="Back" hitSlop={8}>
+            <Ionicons name="chevron-back" size={16} color={t.brand(600)} />
+            <Text style={{ fontSize: 14, fontWeight: "700", color: t.brand(600) }}>Back</Text>
           </Pressable>
           <View style={{ flex: 1 }}>{header}</View>
         </View>
@@ -450,57 +454,8 @@ export function GameReplay({
             )}
             {!loading && moves.length > 0 && (
               <ScrollView style={st.moveListScroll} nestedScrollEnabled>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 3 }}>
-                  {moves.map((mv, idx) => {
-                    const branched = line.branchStartsAt !== null && idx >= line.branchStartsAt;
-                    const current = idx === currentIndex;
-                    return (
-                      <View key={idx} style={{ flexDirection: "row", alignItems: "center" }}>
-                        {/* Where the game stops and your line starts. */}
-                        {idx === line.branchStartsAt && (
-                          <Text style={{ color: t.brand(600), fontSize: 13, marginHorizontal: 3 }}>(</Text>
-                        )}
-                        {mv.color === "w" && (
-                          <Text style={{ color: t.textFaint, fontSize: 13, marginRight: 2 }}>{mv.moveNumber}.</Text>
-                        )}
-                        <Pressable
-                          onPress={() => goTo(idx)}
-                          style={[
-                            st.moveChip,
-                            current ? { backgroundColor: branched ? t.brand(500) : t.brand(600) } : null,
-                          ]}
-                        >
-                          <Text
-                            style={{
-                              fontSize: 13,
-                              fontFamily: "monospace",
-                              fontStyle: branched ? "italic" : "normal",
-                              color: current ? "#fff" : branched ? t.brand(600) : t.text,
-                            }}
-                          >
-                            {mv.san}
-                          </Text>
-                        </Pressable>
-                        {branched && idx === moves.length - 1 && (
-                          <Text style={{ color: t.brand(600), fontSize: 13, marginHorizontal: 3 }}>)</Text>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
+                <MoveList mainMoves={gameMoves} line={line} />
               </ScrollView>
-            )}
-
-            {line.branch && (
-              <Pressable
-                onPress={line.clearBranch}
-                style={[st.backToGame, { borderColor: t.brand(600) }]}
-              >
-                <Ionicons name="return-up-back" size={14} color={t.brand(600)} />
-                <Text style={{ fontSize: 12, fontWeight: "700", color: t.brand(600) }}>
-                  Back to the game
-                </Text>
-              </Pressable>
             )}
           </View>
 
@@ -513,24 +468,32 @@ export function GameReplay({
           fixed for the same reason. */}
         {pgn && (
           <View style={[st.actionsRow, { borderColor: t.border }]}>
-            <Pressable onPress={handleDownload} style={[st.actionIconBtn, { borderColor: t.border }]}>
+            <Pressable onPress={handleDownload} accessibilityLabel="Download PGN" style={[st.actionIconBtn, { borderColor: t.border }]}>
               <Ionicons name="download-outline" size={15} color={t.textMuted} />
             </Pressable>
-            <Pressable onPress={() => handleAnalysis("chesscom")} style={[st.actionBtn, { borderColor: t.border }]}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted }}>Chess.com</Text>
+            {/* Each site's own mark, as on the web: a phone row has no room for
+                four labels. Lichess licenses its logo for referring to
+                lichess.org, which this button does. */}
+            <Pressable onPress={() => handleAnalysis("chesscom")} accessibilityLabel="Open in Chess.com" style={[st.actionIconBtn, { borderColor: t.border }]}>
+              <Svg width={16} height={16} viewBox="0 0 24 24">
+                <Circle cx={12} cy={5.5} r={3.5} fill="#81b64c" />
+                <Path fill="#81b64c" d="M9.2 9.5h5.6l-.9 4.2c1.9.9 3.3 2.6 3.6 4.6H6.5c.3-2 1.7-3.7 3.6-4.6zM5.5 19.5h13a1.5 1.5 0 010 3h-13a1.5 1.5 0 010-3z" />
+              </Svg>
             </Pressable>
-            <Pressable onPress={() => handleAnalysis("lichess")} disabled={analysisLoading === "lichess"} style={[st.actionBtn, { borderColor: t.border }]}>
+            <Pressable onPress={() => handleAnalysis("lichess")} disabled={analysisLoading === "lichess"} accessibilityLabel="Open in Lichess" style={[st.actionIconBtn, { borderColor: t.border }]}>
               {analysisLoading === "lichess" ? (
                 <ActivityIndicator size="small" color={t.textMuted} />
               ) : (
-                <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted }}>Lichess</Text>
+                <Svg width={16} height={16} viewBox="0 0 50 50">
+                  <Path fill={t.text} stroke={t.text} strokeLinejoin="round" d="M38.956.5c-3.53.418-6.452.902-9.286 2.984C5.534 1.786-.692 18.533.68 29.364 3.493 50.214 31.918 55.785 41.329 41.7c-7.444 7.696-19.276 8.752-28.323 3.084S-.506 27.392 4.683 17.567C9.873 7.742 18.996 4.535 29.03 6.405c2.43-1.418 5.225-3.22 7.655-3.187l-1.694 4.86 12.752 21.37c-.439 5.654-5.459 6.112-5.459 6.112-.574-1.47-1.634-2.942-4.842-6.036-3.207-3.094-17.465-10.177-15.788-16.207-2.001 6.967 10.311 14.152 14.04 17.663 3.73 3.51 5.426 6.04 5.795 6.756 0 0 9.392-2.504 7.838-8.927L37.4 7.171z" />
+                </Svg>
               )}
             </Pressable>
             {/* share-social, not share: the three linked nodes are the glyph
                 people read as "share", where Ionicons' "share" is a box with
                 an arrow that reads as "open elsewhere". No label — the icon
                 carries it, and the row is tight with four controls. */}
-            <Pressable onPress={handleShare} style={[st.actionIconBtn, { borderColor: t.border }]}>
+            <Pressable onPress={handleShare} accessibilityLabel="Share" style={[st.actionIconBtn, { borderColor: t.border }]}>
               <Ionicons name="share-social-outline" size={15} color={t.textMuted} />
             </Pressable>
           </View>
@@ -550,29 +513,16 @@ export function GameReplay({
 
 const st = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingBottom: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  backBtn: { paddingTop: 2 },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 2, borderWidth: 2, borderRadius: 999, paddingLeft: 6, paddingRight: 10, paddingVertical: 4 },
   enginePanel: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 12 },
   scorePill: { minWidth: 54, alignItems: "center", borderRadius: 5, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 5, paddingVertical: 2 },
   boardArea: { alignItems: "center", paddingVertical: 16 },
   moveListWrap: { padding: 16 },
-  backToGame: {
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderRadius: 999,
-  },
-  moveListScroll: { maxHeight: 140 },
-  moveChip: { borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, marginRight: 4 },
+  moveListScroll: { maxHeight: 260 },
   // Centred, not right-aligned: it sits directly above the move controls now,
   // and two pinned bars disagreeing about their alignment reads as a mistake.
   actionsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
-  actionIconBtn: { height: 30, width: 30, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
-  actionBtn: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 10, height: 30 },
+  actionIconBtn: { height: 36, width: 44, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
   navRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   navBtn: { height: 36, width: 36, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
 });
