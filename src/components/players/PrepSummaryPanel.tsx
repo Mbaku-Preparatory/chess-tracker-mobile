@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Chess } from "chess.js";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeContext";
@@ -9,7 +11,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ColorBadge, ResultBadge } from "@/components/ui/Badge";
 import Chessboard, { type ChessboardRef } from "react-native-chessboard";
-import { PgnViewerModal } from "./PgnViewerModal";
+import type { RootStackParamList } from "@/navigation/types";
 import type { Game, PrepSummary, PrepTree, PrepTreeNode } from "@/types";
 
 const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -103,7 +105,7 @@ function InteractivePrepTree({
   const [gamesTotal, setGamesTotal] = useState(0);
   const [gamesPage, setGamesPage] = useState(1);
   const [gamesLoading, setGamesLoading] = useState(false);
-  const [viewerGame, setViewerGame] = useState<Game | null>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [downloading, setDownloading] = useState(false);
   const fetchRef = useRef(0);
 
@@ -143,7 +145,6 @@ function InteractivePrepTree({
 
   return (
     <View>
-      {viewerGame && <PgnViewerModal game={viewerGame} onClose={() => setViewerGame(null)} />}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: "center", gap: 4, marginBottom: 10 }}>
         <Pressable onPress={() => setPath([])}>
@@ -230,7 +231,7 @@ function InteractivePrepTree({
 
         {games.length > 0 ? (
           <View style={{ gap: 6 }}>
-            {games.map((g) => <GameRow key={g.id} game={g} onOpen={setViewerGame} />)}
+            {games.map((g) => <GameRow key={g.id} game={g} onOpen={(game) => navigation.navigate("GameAnalysis", { kind: "game", game })} />)}
             {games.length < gamesTotal && (
               <Button title={gamesLoading ? "Loading…" : `Show more (${gamesTotal - games.length})`} variant="ghost" size="sm" onPress={loadMore} disabled={gamesLoading} style={{ alignSelf: "center", marginTop: 4 }} />
             )}

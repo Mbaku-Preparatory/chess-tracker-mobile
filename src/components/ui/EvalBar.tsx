@@ -1,9 +1,11 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { cpToWhitePct, formatScore, type StockfishResult } from "@/hooks/useStockfish";
+import { cpToWhitePct, formatScore, type EngineResult } from "@/hooks/useEngine";
 import { useTheme } from "@/theme/ThemeContext";
 
-type EvalBarProps = Pick<StockfishResult, "score" | "mate" | "depth" | "isAnalyzing" | "source"> & {
+type EvalBarProps = Pick<EngineResult, "depth" | "isAnalyzing" | "source"> & {
+  score: number | null;
+  mate: number | null;
   /** Only used by the vertical bar. */
   height?: number;
   /**

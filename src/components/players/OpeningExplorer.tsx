@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeContext";
-import { PgnViewerModal } from "./PgnViewerModal";
-import { MasterGameViewerModal } from "./MasterGameViewerModal";
+import type { RootStackParamList } from "@/navigation/types";
 import type { ColorChoice, ExplorerDbGame, Game, GameSource, MasterGame } from "@/types";
 
 function WDBBar({ white, draw, black, playerColor }: { white: number; draw: number; black: number; playerColor: ColorChoice }) {
@@ -52,10 +53,9 @@ export function OpeningExplorer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllMoves, setShowAllMoves] = useState(false);
-  const [viewingGame, setViewingGame] = useState<Game | null>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [masterGames, setMasterGames] = useState<MasterGame[]>([]);
   const [masterLoading, setMasterLoading] = useState(true);
-  const [viewingMasterGame, setViewingMasterGame] = useState<MasterGame | null>(null);
   const [gamesTab, setGamesTab] = useState<"gm" | "recent">("gm");
 
   useEffect(() => {
@@ -89,8 +89,6 @@ export function OpeningExplorer({
 
   return (
     <View style={{ padding: 14, gap: 18 }}>
-      {viewingGame && <PgnViewerModal game={viewingGame} onClose={() => setViewingGame(null)} />}
-      {viewingMasterGame && <MasterGameViewerModal game={viewingMasterGame} onClose={() => setViewingMasterGame(null)} />}
 
       <View>
         <Text style={[st.sectionLabel, { color: t.textFaint }]}>
@@ -159,7 +157,7 @@ export function OpeningExplorer({
           ) : masterGames.length > 0 ? (
             <View style={[st.gameList, { backgroundColor: t.elevated }]}>
               {masterGames.map((g) => (
-                <Pressable key={g.id} onPress={() => g.moves?.trim() && setViewingMasterGame(g)} style={st.gameRow}>
+                <Pressable key={g.id} onPress={() => g.moves?.trim() && navigation.navigate("GameAnalysis", { kind: "master", game: g })} style={st.gameRow}>
                   <Text style={{ fontSize: 11, color: t.textMuted, flex: 1 }} numberOfLines={1}>
                     {g.white} vs {g.black} {g.year ? `· ${g.year}` : ""}
                   </Text>
@@ -176,7 +174,7 @@ export function OpeningExplorer({
           top_games.length > 0 ? (
             <View style={[st.gameList, { backgroundColor: t.elevated }]}>
               {top_games.map((g) => (
-                <Pressable key={g.id} onPress={() => g.pgn_available && setViewingGame(toGameObject(g))} style={st.gameRow}>
+                <Pressable key={g.id} onPress={() => g.pgn_available && navigation.navigate("GameAnalysis", { kind: "game", game: toGameObject(g) })} style={st.gameRow}>
                   <Text style={{ fontSize: 11, color: t.textMuted, flex: 1 }} numberOfLines={1}>
                     {g.player_name} vs {g.opponent_name} {g.date_played ? `· ${g.date_played.slice(0, 4)}` : ""}
                   </Text>
