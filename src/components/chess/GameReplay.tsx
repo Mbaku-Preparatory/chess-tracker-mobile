@@ -176,51 +176,36 @@ function NavBtn({ icon, disabled, onPress, color }: { icon: keyof typeof Ionicon
   );
 }
 
-/** The engine switch and Lichess's best lines. */
+/** Lichess's best lines, shown while the engine is on. Its switch sits in the
+ * action row at the bottom, with the other things you reach for. */
 function EnginePanel({ engine, fen }: { engine: EngineResult; fen: string }) {
   const t = useTheme();
-  const [prefs, setPrefs] = useAnalysisPrefs();
   return (
     <View style={[st.enginePanel, { backgroundColor: t.surface, borderColor: t.border }]}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Switch
-          value={prefs.engine}
-          onValueChange={(engineOn) => setPrefs({ engine: engineOn })}
-          trackColor={{ true: t.brand(600), false: t.border }}
-          accessibilityLabel="Engine"
-        />
-        <Text style={{ fontSize: 14, fontWeight: "700", color: t.text }}>Engine</Text>
-      </View>
-      {prefs.engine ? (
-        <View style={{ gap: 6, marginTop: 8 }}>
-          {engine.isAnalyzing && <ActivityIndicator size="small" color={t.textMuted} style={{ alignSelf: "flex-start" }} />}
-          {engine.lines.map((line, i) => {
-            const whiteBetter = (line.mate ?? line.score ?? 0) >= 0;
-            return (
-              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <View style={[st.scorePill, { backgroundColor: whiteBetter ? "#ffffff" : "#262626", borderColor: t.border }]}>
-                  <Text style={{ fontSize: 11, fontWeight: "800", fontFamily: "monospace", color: whiteBetter ? "#171717" : "#ffffff" }}>
-                    {formatScore(line.score, line.mate)}
-                  </Text>
-                </View>
-                <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, fontFamily: "monospace", color: t.textMuted }}>
-                  {pvToSan(fen, line.pv)}
+      <View style={{ gap: 6 }}>
+        {engine.isAnalyzing && <ActivityIndicator size="small" color={t.textMuted} style={{ alignSelf: "flex-start" }} />}
+        {engine.lines.map((line, i) => {
+          const whiteBetter = (line.mate ?? line.score ?? 0) >= 0;
+          return (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={[st.scorePill, { backgroundColor: whiteBetter ? "#ffffff" : "#262626", borderColor: t.border }]}>
+                <Text style={{ fontSize: 11, fontWeight: "800", fontFamily: "monospace", color: whiteBetter ? "#171717" : "#ffffff" }}>
+                  {formatScore(line.score, line.mate)}
                 </Text>
               </View>
-            );
-          })}
-          {!engine.isAnalyzing && engine.lines.length === 0 && (
-            <Text style={{ fontSize: 12, color: t.textFaint }}>Lichess has no evaluation for this position.</Text>
-          )}
-          {engine.source === "lichess" && (
-            <Text style={{ fontSize: 11, color: t.textFaint }}>Depth {engine.depth} · Lichess cloud</Text>
-          )}
-        </View>
-      ) : (
-        <Text style={{ fontSize: 12, color: t.textFaint, marginTop: 6 }}>
-          Off. Turn it on for the evaluation and best lines, from Lichess&apos;s cloud analysis.
-        </Text>
-      )}
+              <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, fontFamily: "monospace", color: t.textMuted }}>
+                {pvToSan(fen, line.pv)}
+              </Text>
+            </View>
+          );
+        })}
+        {!engine.isAnalyzing && engine.lines.length === 0 && (
+          <Text style={{ fontSize: 12, color: t.textFaint }}>Lichess has no evaluation for this position.</Text>
+        )}
+        {engine.source === "lichess" && (
+          <Text style={{ fontSize: 11, color: t.textFaint }}>Depth {engine.depth} · Lichess cloud</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -263,7 +248,7 @@ export function GameReplay({
   const line = useAnalysisLine(gameMoves);
   const { moves, index: currentIndex, fen: currentFen, goTo } = line;
 
-  const [prefs] = useAnalysisPrefs();
+  const [prefs, setPrefs] = useAnalysisPrefs();
   const engine = useEngine(currentFen, prefs.engine && !loading);
   const bestLine = engine.lines[0] ?? null;
 
@@ -416,9 +401,11 @@ export function GameReplay({
             </View>
           </View>
 
-          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
-            <EnginePanel engine={engine} fen={currentFen} />
-          </View>
+          {prefs.engine && (
+            <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+              <EnginePanel engine={engine} fen={currentFen} />
+            </View>
+          )}
 
           <View style={st.moveListWrap}>
             {error && <Text style={{ color: t.danger, fontSize: 13, textAlign: "center" }}>{error}</Text>}
@@ -441,6 +428,18 @@ export function GameReplay({
           fixed for the same reason. */}
         {pgn && (
           <View style={[st.actionsRow, { borderColor: t.border }]}>
+            {/* The engine's switch, marked with a chip so it reads as "engine"
+                among icons. Off by default: the evaluation is a choice. */}
+            <View style={[st.engineToggle, { borderColor: prefs.engine ? t.brand(600) : t.border }]}>
+              <Ionicons name="hardware-chip-outline" size={16} color={prefs.engine ? t.brand(600) : t.textMuted} />
+              <Switch
+                value={prefs.engine}
+                onValueChange={(engineOn) => setPrefs({ engine: engineOn })}
+                trackColor={{ true: t.brand(600), false: t.border }}
+                accessibilityLabel="Engine"
+                style={{ transform: [{ scale: 0.8 }] }}
+              />
+            </View>
             <Pressable onPress={handleDownload} accessibilityLabel="Download PGN" style={[st.actionIconBtn, { borderColor: t.border }]}>
               <Ionicons name="download-outline" size={15} color={t.textMuted} />
             </Pressable>
@@ -494,6 +493,7 @@ const st = StyleSheet.create({
   // Centred, not right-aligned: it sits directly above the move controls now,
   // and two pinned bars disagreeing about their alignment reads as a mistake.
   actionsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
+  engineToggle: { flexDirection: "row", alignItems: "center", height: 36, paddingLeft: 8, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth },
   actionIconBtn: { height: 36, width: 44, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
   navRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   navBtn: { height: 36, width: 36, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
