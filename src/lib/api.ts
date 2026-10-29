@@ -336,18 +336,6 @@ export const api = {
     return fetchJson(`${API_BASE}/openings/master-games/?${qs}`);
   },
 
-  /** Every move played from this position in the master corpus, with results. */
-  getPositionExplorer(
-    fen: string,
-    source: import("@/types").ExplorerSource,
-    line: string[] = [],
-  ): Promise<import("@/types").PositionExplorer> {
-    // The moves let the server name a position the opening data only names
-    // further down the line.
-    const qs = new URLSearchParams({ fen, source, line: line.join(",") });
-    return fetchJson(`${API_BASE}/openings/explorer/?${qs}`);
-  },
-
   getOpeningStudies(slug: string, limit?: number): Promise<{ suggestions: OpeningStudySuggestion[] }> {
     const qs = limit ? `?limit=${limit}` : "";
     return fetchJson(`${API_BASE}/players/${slug}/opening-studies/${qs}`);

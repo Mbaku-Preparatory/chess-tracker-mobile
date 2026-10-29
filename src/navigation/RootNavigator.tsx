@@ -13,7 +13,6 @@ import { LoginScreen } from "@/screens/LoginScreen";
 import { SignupScreen } from "@/screens/SignupScreen";
 import { VerifyEmailScreen } from "@/screens/VerifyEmailScreen";
 import { SchedulerScreen } from "@/screens/SchedulerScreen";
-import { ExplorerScreen } from "@/screens/ExplorerScreen";
 import { PlayersScreen } from "@/screens/PlayersScreen";
 import { PlayerNewScreen } from "@/screens/PlayerNewScreen";
 import { PlayerDetailScreen } from "@/screens/PlayerDetailScreen";
@@ -32,7 +31,6 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const TAB_ICONS: Record<keyof MainTabParamList, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Schedule: { active: "today", inactive: "today-outline" },
   Players: { active: "people", inactive: "people-outline" },
-  Explorer: { active: "compass", inactive: "compass-outline" },
 };
 
 function MainTabs() {
@@ -55,7 +53,6 @@ function MainTabs() {
           not Schedule - is the app's primary destination. The route name stays "Players" so the
           existing navigate("Players") call sites keep working. */}
       <Tab.Screen name="Players" component={PlayersScreen} options={{ tabBarLabel: "Prep" }} />
-      <Tab.Screen name="Explorer" component={ExplorerScreen} />
       {/* Schedule sits last: it is the one tab you go to on purpose, on the day
           you need it, rather than something you browse. */}
       <Tab.Screen name="Schedule" component={SchedulerScreen} />

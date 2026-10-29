@@ -218,33 +218,6 @@ export interface MasterGame {
   moves: string;
 }
 
-// ── Position explorer ────────────────────────────────────────────────────────
-
-/** Which games the position explorer counts. */
-export type ExplorerSource = "otb" | "online" | "all";
-
-export interface PositionExplorerMove {
-  uci: string;
-  san: string;
-  games: number;
-  white: number;
-  draws: number;
-  black: number;
-}
-
-export interface PositionExplorer {
-  /** False until the server's index has been built. */
-  available: boolean;
-  fen: string;
-  source?: ExplorerSource;
-  games?: number;
-  white?: number;
-  draws?: number;
-  black?: number;
-  opening?: { eco_code: string; name: string } | null;
-  moves: PositionExplorerMove[];
-}
-
 // ── Opening Explorer ─────────────────────────────────────────────────────────
 
 export interface ExplorerDbStats {
