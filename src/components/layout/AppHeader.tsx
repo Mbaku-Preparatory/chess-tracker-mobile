@@ -106,17 +106,6 @@ export function AppHeader() {
                 <Text style={{ color: t.text, fontSize: 14 }}>Account</Text>
               </TouchableOpacity>
 
-              {/* Unconditional: everyone has a profile from the moment they
-                  register. The old repertoire entry here was gated on an
-                  onboarding flag, which no longer exists. */}
-              <TouchableOpacity
-                style={[st.menuItem, { borderColor: t.border }]}
-                onPress={() => { setMenuOpen(false); navigation.navigate("MyProfile"); }}
-              >
-                <Ionicons name="stats-chart-outline" size={17} color={t.textMuted} />
-                <Text style={{ color: t.text, fontSize: 14 }}>My Profile</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity style={st.logoutItem} onPress={handleLogout}>
                 <Ionicons name="log-out-outline" size={17} color={t.danger} />
                 <Text style={{ color: t.danger, fontSize: 14, fontWeight: "600" }}>Logout</Text>

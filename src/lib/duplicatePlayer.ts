@@ -20,8 +20,6 @@ export interface DuplicatePlayer {
   slug: string;
   full_name: string;
   fide_id: string | null;
-  /** Your own profile is the MyProfile screen, never PlayerDetail. */
-  is_self: boolean;
 }
 
 interface DuplicateBody {
@@ -46,9 +44,5 @@ export function duplicatePlayerFrom(err: unknown): DuplicatePlayer | null {
     slug: player.slug,
     full_name: String(player.full_name ?? ""),
     fide_id: player.fide_id ?? null,
-    // Compared to `true` rather than tested for truthiness: DRF used to coerce
-    // this to the string "False", which is truthy and would route every caller
-    // to their own profile. The server no longer does that; this is the belt.
-    is_self: player.is_self === true,
   };
 }

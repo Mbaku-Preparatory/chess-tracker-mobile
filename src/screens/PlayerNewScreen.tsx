@@ -220,8 +220,7 @@ export function PlayerNewScreen({ navigation }: Props) {
       // than reporting a failure for something that is already done.
       const existing = duplicatePlayerFrom(err);
       if (existing) {
-        if (existing.is_self) navigation.replace("MyProfile");
-        else navigation.replace("PlayerDetail", { slug: existing.slug });
+        navigation.replace("PlayerDetail", { slug: existing.slug });
         return;
       }
       setError(userMessage(err, "Could not create player. Try again."));

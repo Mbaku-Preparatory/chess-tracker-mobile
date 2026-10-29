@@ -21,7 +21,6 @@ export function SignupScreen({ navigation }: Props) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fideId, setFideId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,8 +38,7 @@ export function SignupScreen({ navigation }: Props) {
         password,
         username.trim(),
         firstName.trim(),
-        lastName.trim(),
-        fideId.trim()
+        lastName.trim()
       );
       navigation.navigate("VerifyEmail", { email: normalizedEmail });
     } catch (err) {
@@ -109,21 +107,6 @@ export function SignupScreen({ navigation }: Props) {
             keyboardType="email-address"
             textContentType="emailAddress"
           />
-          <TextField
-            label="FIDE ID (optional)"
-            value={fideId}
-            onChangeText={setFideId}
-            placeholder="1503014"
-            keyboardType="number-pad"
-            autoCorrect={false}
-          />
-          <Text style={{ color: t.textMuted, fontSize: 12, marginTop: -8 }}>
-            We&apos;ll pull in your rating and recent tournament games so
-            Mbaku-bot, the coach built into the app, can talk about your own
-            play — which openings you score worst with, who you struggle
-            against. You can add this later.
-          </Text>
-
           <TextField
             label="Password (min 6 chars)"
             value={password}

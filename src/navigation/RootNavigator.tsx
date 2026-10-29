@@ -22,7 +22,6 @@ import { PlayerImportScreen } from "@/screens/PlayerImportScreen";
 import { SessionNewScreen } from "@/screens/SessionNewScreen";
 import { SessionDetailScreen } from "@/screens/SessionDetailScreen";
 import { AccountScreen } from "@/screens/AccountScreen";
-import MyProfileScreen from "@/screens/MyProfileScreen";
 import { GameAnalysisScreen } from "@/screens/GameAnalysisScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -89,7 +88,6 @@ export function RootNavigator() {
           <Stack.Screen name="PlayerImport" component={PlayerImportScreen} />
           <Stack.Screen name="SessionNew" component={SessionNewScreen} />
           <Stack.Screen name="SessionDetail" component={SessionDetailScreen} />
-          <Stack.Screen name="MyProfile" component={MyProfileScreen} />
           <Stack.Screen name="Account" component={AccountScreen} />
           <Stack.Screen name="GameAnalysis" component={GameAnalysisScreen} />
         </Stack.Group>

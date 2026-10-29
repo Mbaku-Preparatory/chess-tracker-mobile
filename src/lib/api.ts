@@ -18,7 +18,6 @@ import type {
   PerformanceSummary,
   Player,
   PlayerAccount,
-  MyPlayer,
   PlayerDetail,
   PlayerLookupResult,
   PrepSession,
@@ -95,30 +94,6 @@ async function fetchJson<T>(url: string, init?: RequestInit, _retriedAfterRefres
 export const api = {
   getPlayerDetail(slug: string): Promise<PlayerDetail> {
     return fetchJson(`${API_BASE}/players/${slug}/`);
-  },
-
-  /**
-   * The signed-in user's own profile.
-   *
-   * Returns a PlayerDetail — the same shape as any other player — so the
-   * existing cards and the assistant work on it unchanged.
-   */
-  getMyPlayer(): Promise<MyPlayer> {
-    return fetchJson(`${API_BASE}/me/player/`);
-  },
-
-  /**
-   * Save a FIDE ID and queue the import of their games.
-   *
-   * Returns immediately; the worker does the fetching. Poll `import_job`
-   * with getImportJob() to follow it.
-   */
-  setMyFideId(fideId: string): Promise<MyPlayer> {
-    return fetchJson(`${API_BASE}/me/player/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fide_id: fideId }),
-    });
   },
 
   getPlayerGames(slug: string, filters?: GamesFilter): Promise<PaginatedResponse<Game>> {
@@ -358,8 +333,7 @@ export const api = {
     password: string,
     username: string,
     firstName: string,
-    lastName: string,
-    fideId = ""
+    lastName: string
   ): Promise<{ detail: string; email: string }> {
     return fetchJson(`${API_BASE}/auth/register/`, {
       method: "POST",
@@ -368,7 +342,6 @@ export const api = {
         email,
         password,
         username,
-        fide_id: fideId,
         first_name: firstName,
         last_name: lastName,
       }),
