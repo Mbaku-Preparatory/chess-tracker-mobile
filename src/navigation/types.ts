@@ -5,7 +5,6 @@ import type { Game, MasterGame } from "@/types";
 export type MainTabParamList = {
   Schedule: undefined;
   Players: undefined;
-  Explorer: undefined;
 };
 
 export type RootStackParamList = {
