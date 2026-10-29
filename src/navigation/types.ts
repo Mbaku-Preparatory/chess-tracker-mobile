@@ -26,7 +26,6 @@ export type RootStackParamList = {
   PlayerImport: { slug: string; source?: "chesscom" | "lichess" | "chess_results" | "pgn" };
   SessionNew: undefined;
   SessionDetail: { id: number };
-  MyProfile: undefined;
   // The game travels with the route: every list that opens one already holds
   // it, so the screen fetches only the PGN, and only for a scouted game.
   GameAnalysis: { kind: "game"; game: Game } | { kind: "master"; game: MasterGame };

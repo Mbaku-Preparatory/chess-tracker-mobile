@@ -230,18 +230,6 @@ export function AccountScreen({ navigation }: Props) {
         </>
       )}
 
-      <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>MY CHESS</Text>
-      <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-        {/* The account holder as a player, not as a login. Everything above
-            this point edits who you are to us; this is who you are over a
-            board. */}
-        <LinkRow
-          label="My profile"
-          hint="Your FIDE rating, your games, and Mbaku on your own play."
-          onPress={() => navigation.navigate("MyProfile")}
-        />
-      </View>
-
       <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>NOTIFICATIONS</Text>
       <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border, padding: 14 }]}>
         <Text style={{ color: t.textMuted, fontSize: 13, marginBottom: 12 }}>
