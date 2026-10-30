@@ -1,13 +1,18 @@
 import { Chess } from "chess.js";
 import { useEffect, useRef, useState } from "react";
 
+import { useEngineHost } from "@/lib/engine/EngineHost";
+
 /**
- * Engine lines for a position, from Lichess's cloud eval: positions Lichess
- * has analysed, usually very deep. The phone runs no engine of its own (React
- * Native has no WebAssembly worker), so a position Lichess has not analysed
- * shows no evaluation rather than a guess.
+ * Engine lines for a position, as on the web (src/hooks/useEngine.ts there):
  *
- * Scores are from White's side, as Lichess reports them.
+ * ① A position already analysed is answered from memory.
+ * ② Lichess's cloud eval: positions Lichess has analysed, usually deep.
+ * ③ Otherwise Stockfish on the phone (src/lib/engine/EngineHost.tsx), to
+ *    LOCAL_DEPTH with a time cap.
+ *
+ * Scores are always from White's side. Lichess reports them that way; UCI
+ * reports the side to move's, so a local score is flipped when Black is to move.
  */
 export interface EngineLine {
   score: number | null; // centipawns, positive = White better
@@ -19,13 +24,36 @@ export interface EngineResult {
   lines: EngineLine[];
   depth: number;
   isAnalyzing: boolean;
-  source: "lichess" | null;
+  source: "lichess" | "local" | null;
 }
 
 export const MULTI_PV = 3;
 
 const EMPTY: EngineResult = { lines: [], depth: 0, isAnalyzing: false, source: null };
 const DEBOUNCE_MS = 150;
+// A phone runs the single-threaded web build: deep enough to be useful, and
+// capped so a hard position still answers in a few seconds.
+const LOCAL_DEPTH = 18;
+const LOCAL_CAP_MS = 4000;
+
+/** One "info ... pv ..." line of a search, as a line with White's score. */
+function parseInfo(line: string, whiteToMove: boolean): { k: number; depth: number; line: EngineLine } | null {
+  if (!line.includes(" pv ")) return null;
+  // A bound is a guess the search is about to correct; showing it flickers.
+  if (line.includes("lowerbound") || line.includes("upperbound")) return null;
+  const cp = /\bscore cp (-?\d+)/.exec(line);
+  const mate = /\bscore mate (-?\d+)/.exec(line);
+  const sign = whiteToMove ? 1 : -1;
+  return {
+    k: Number(/\bmultipv (\d+)/.exec(line)?.[1] ?? 1),
+    depth: Number(/\bdepth (\d+)/.exec(line)?.[1] ?? 0),
+    line: {
+      score: cp ? sign * Number(cp[1]) : null,
+      mate: mate ? sign * Number(mate[1]) : null,
+      pv: line.slice(line.indexOf(" pv ") + 4).trim().split(/\s+/),
+    },
+  };
+}
 
 /** Centipawns to White's winning share (0–100), for the eval bar. */
 export function cpToWhitePct(score: number | null, mate: number | null): number {
@@ -67,6 +95,9 @@ const memory = new Map<string, EngineResult>();
 export function useEngine(fen: string, enabled: boolean): EngineResult {
   const [result, setResult] = useState<EngineResult>(EMPTY);
   const abortRef = useRef<AbortController | null>(null);
+  const host = useEngineHost();
+  const hostRef = useRef(host);
+  hostRef.current = host;
 
   useEffect(() => {
     abortRef.current?.abort();
@@ -83,7 +114,9 @@ export function useEngine(fen: string, enabled: boolean): EngineResult {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    let cancelLocal: (() => void) | null = null;
     const timer = setTimeout(async () => {
+      let cloud: EngineResult | null = null;
       try {
         const url = `https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=${MULTI_PV}`;
         const resp = await fetch(url, { headers: { Accept: "application/json" }, signal: controller.signal });
@@ -93,22 +126,54 @@ export function useEngine(fen: string, enabled: boolean): EngineResult {
           mate: typeof pv.mate === "number" ? pv.mate : null,
           pv: (pv.moves ?? "").split(" ").filter(Boolean),
         }));
-        const next: EngineResult = lines.length
-          ? { lines, depth: data.depth ?? 0, isAnalyzing: false, source: "lichess" }
-          : EMPTY;
-        if (lines.length) memory.set(fen, next);
-        setResult(next);
+        if (lines.length) cloud = { lines, depth: data.depth ?? 0, isAnalyzing: false, source: "lichess" };
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
-        setResult(EMPTY);
       }
+      if (controller.signal.aborted) return;
+      if (cloud) {
+        memory.set(fen, cloud);
+        setResult(cloud);
+        return;
+      }
+
+      // Lichess has not analysed it: the phone's own Stockfish.
+      const engine = hostRef.current;
+      if (!engine) {
+        setResult(EMPTY);
+        return;
+      }
+      const whiteToMove = fen.split(" ")[1] !== "b";
+      const found: EngineLine[] = [];
+      let depth = 0;
+      const run = engine.search(
+        ["setoption name UCI_LimitStrength value false", `setoption name MultiPV value ${MULTI_PV}`, `position fen ${fen}`],
+        `go depth ${LOCAL_DEPTH} movetime ${LOCAL_CAP_MS}`,
+        (info) => {
+          const parsed = parseInfo(info, whiteToMove);
+          if (!parsed) return;
+          found[parsed.k - 1] = parsed.line;
+          if (parsed.k === 1) depth = parsed.depth;
+          setResult({ lines: found.filter(Boolean), depth, isAnalyzing: true, source: "local" });
+        },
+      );
+      cancelLocal = run.cancel;
+      void run.done.then(() => {
+        const lines = found.filter(Boolean);
+        const done: EngineResult = lines.length ? { lines, depth, isAnalyzing: false, source: "local" } : EMPTY;
+        if (lines.length) memory.set(fen, done);
+        setResult(done);
+      });
     }, DEBOUNCE_MS);
 
     return () => {
       clearTimeout(timer);
       controller.abort();
+      cancelLocal?.();
     };
   }, [fen, enabled]);
 
-  return result;
+  // The engine could not start (offline on first use): stop saying it is thinking.
+  const failed = host?.failed ?? false;
+  return failed && result.isAnalyzing && result.lines.length === 0 ? EMPTY : result;
 }

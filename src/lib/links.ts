@@ -27,3 +27,11 @@ export function accountDeletionMailto(username: string): string {
   );
   return `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
 }
+
+/**
+ * The site's Stockfish behind a UCI bridge (public/engine.html on the web
+ * app), which the app keeps open in a hidden WebView: see
+ * src/lib/engine/EngineHost.tsx. EXPO_PUBLIC_ENGINE_URL points a local build
+ * at a local web app; unset, it is the real site, never nothing.
+ */
+export const ENGINE_URL = process.env.EXPO_PUBLIC_ENGINE_URL || "https://www.chesspreparatory.com/engine.html";

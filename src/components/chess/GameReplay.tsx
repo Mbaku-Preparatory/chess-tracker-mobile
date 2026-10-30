@@ -176,7 +176,8 @@ function NavBtn({ icon, disabled, onPress, color }: { icon: keyof typeof Ionicon
   );
 }
 
-/** Lichess's best lines, shown while the engine is on. Its switch sits in the
+/** The engine's best lines (Lichess's cloud, else Stockfish on the phone),
+ * shown while the engine is on. Its switch sits in the
  * action row at the bottom, with the other things you reach for. */
 function EnginePanel({ engine, fen }: { engine: EngineResult; fen: string }) {
   const t = useTheme();
@@ -200,10 +201,12 @@ function EnginePanel({ engine, fen }: { engine: EngineResult; fen: string }) {
           );
         })}
         {!engine.isAnalyzing && engine.lines.length === 0 && (
-          <Text style={{ fontSize: 12, color: t.textFaint }}>Lichess has no evaluation for this position.</Text>
+          <Text style={{ fontSize: 12, color: t.textFaint }}>No evaluation: the engine needs a connection the first time it runs.</Text>
         )}
-        {engine.source === "lichess" && (
-          <Text style={{ fontSize: 11, color: t.textFaint }}>Depth {engine.depth} · Lichess cloud</Text>
+        {engine.source && (
+          <Text style={{ fontSize: 11, color: t.textFaint }}>
+            Depth {engine.depth} · {engine.source === "lichess" ? "Lichess cloud" : "Stockfish on this phone"}
+          </Text>
         )}
       </View>
     </View>

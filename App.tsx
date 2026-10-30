@@ -19,6 +19,7 @@ import { checkVersionGate, type VersionGate } from "@/lib/appVersion";
 import { identifyUser } from "@/lib/monitoring";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
 import { ActiveImportsIndicator } from "@/components/import/ActiveImportsIndicator";
+import { EngineHost } from "@/lib/engine/EngineHost";
 
 function AppShell() {
   const t = useTheme();
@@ -103,7 +104,10 @@ export default function App() {
     <SafeAreaProvider>
       <StoreProvider>
         <ThemeProvider>
-          <AppShell />
+          {/* One Stockfish for the whole app, started on first use. */}
+          <EngineHost>
+            <AppShell />
+          </EngineHost>
         </ThemeProvider>
       </StoreProvider>
     </SafeAreaProvider>
