@@ -5,6 +5,7 @@ import type { Game, MasterGame } from "@/types";
 export type MainTabParamList = {
   Schedule: undefined;
   Players: undefined;
+  Books: undefined;
 };
 
 export type RootStackParamList = {
@@ -25,6 +26,8 @@ export type RootStackParamList = {
   PlayerPrep: { slug: string; tab?: "tree" | "studies" | "ask" };
   PlayerImport: { slug: string; source?: "chesscom" | "lichess" | "chess_results" | "pgn" };
   PlayBot: { slug: string };
+  Book: { publicId: string };
+  BookExercise: { publicId: string; number: number };
   SessionNew: undefined;
   SessionDetail: { id: number };
   // The game travels with the route: every list that opens one already holds

@@ -19,6 +19,9 @@ import { PlayerDetailScreen } from "@/screens/PlayerDetailScreen";
 import { PlayerGamesScreen } from "@/screens/PlayerGamesScreen";
 import { PlayerPrepScreen } from "@/screens/PlayerPrepScreen";
 import { PlayBotScreen } from "@/screens/PlayBotScreen";
+import { BooksScreen } from "@/screens/BooksScreen";
+import { BookScreen } from "@/screens/BookScreen";
+import { BookExerciseScreen } from "@/screens/BookExerciseScreen";
 import { PlayerImportScreen } from "@/screens/PlayerImportScreen";
 import { SessionNewScreen } from "@/screens/SessionNewScreen";
 import { SessionDetailScreen } from "@/screens/SessionDetailScreen";
@@ -31,6 +34,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const TAB_ICONS: Record<keyof MainTabParamList, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Schedule: { active: "today", inactive: "today-outline" },
   Players: { active: "people", inactive: "people-outline" },
+  Books: { active: "book", inactive: "book-outline" },
 };
 
 function MainTabs() {
@@ -53,6 +57,7 @@ function MainTabs() {
           not Schedule - is the app's primary destination. The route name stays "Players" so the
           existing navigate("Players") call sites keep working. */}
       <Tab.Screen name="Players" component={PlayersScreen} options={{ tabBarLabel: "Prep" }} />
+      <Tab.Screen name="Books" component={BooksScreen} />
       {/* Schedule sits last: it is the one tab you go to on purpose, on the day
           you need it, rather than something you browse. */}
       <Tab.Screen name="Schedule" component={SchedulerScreen} />
@@ -87,6 +92,8 @@ export function RootNavigator() {
           <Stack.Screen name="PlayerGames" component={PlayerGamesScreen} />
           <Stack.Screen name="PlayerPrep" component={PlayerPrepScreen} />
           <Stack.Screen name="PlayBot" component={PlayBotScreen} />
+          <Stack.Screen name="Book" component={BookScreen} />
+          <Stack.Screen name="BookExercise" component={BookExerciseScreen} />
           <Stack.Screen name="PlayerImport" component={PlayerImportScreen} />
           <Stack.Screen name="SessionNew" component={SessionNewScreen} />
           <Stack.Screen name="SessionDetail" component={SessionDetailScreen} />

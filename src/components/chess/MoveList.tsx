@@ -10,7 +10,7 @@ import type { AnalysisLine } from "./useAnalysisLine";
  * game is never hidden behind the variation, so there is no "back to the game"
  * to find. The same layout as the web app's.
  */
-export function MoveList({ mainMoves, line }: { mainMoves: ParsedMove[]; line: AnalysisLine }) {
+export function MoveList({ mainMoves, line, intro = null }: { mainMoves: ParsedMove[]; line: AnalysisLine; intro?: string | null }) {
   const t = useTheme();
   const startsAt = line.branchStartsAt;
 
@@ -61,8 +61,14 @@ export function MoveList({ mainMoves, line }: { mainMoves: ParsedMove[]; line: A
     </View>
   );
 
+  // An annotated game's notes sit under the row of the move they follow, in
+  // the body font: they are prose, not notation.
+  const note = (i: number | null) =>
+    i !== null && mainMoves[i].comment ? <Text key={i} style={[st.note, { color: t.textMuted }]}>{mainMoves[i].comment}</Text> : null;
+
   return (
     <View>
+      {intro && <Text style={[st.note, { color: t.textMuted }]}>{intro}</Text>}
       {rows.length === 0 && variation}
       {rows.map((r, n) => (
         <View key={n}>
@@ -71,6 +77,8 @@ export function MoveList({ mainMoves, line }: { mainMoves: ParsedMove[]; line: A
             {r.white === null ? <Text style={[st.mono, st.cell, { flex: 1, color: t.textFaint }]}>…</Text> : cell(r.white)}
             {cell(r.black)}
           </View>
+          {note(r.white)}
+          {note(r.black)}
           {n === variationRow && variation}
         </View>
       ))}
@@ -83,6 +91,7 @@ const st = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", borderRadius: 4 },
   number: { width: 40, paddingLeft: 8 },
   cell: { flex: 1, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 5 },
+  note: { fontSize: 13, lineHeight: 19, paddingHorizontal: 10, paddingVertical: 6 },
   chip: { borderRadius: 4, paddingHorizontal: 4, paddingVertical: 2, marginRight: 2 },
   variation: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginLeft: 40, marginVertical: 4, paddingLeft: 10, paddingVertical: 4, borderLeftWidth: 2 },
 });
