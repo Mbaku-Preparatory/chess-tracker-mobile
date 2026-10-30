@@ -419,3 +419,19 @@ export interface Payment {
 }
 
 
+
+/** GET /players/<slug>/bot-book/?color=: one of the player's games in that colour, for the bot's book. */
+export interface BotBookGame {
+  opening_family: string;
+  opening_name: string;
+  eco: string;
+  date: string | null;
+  /** The first 40 plies as SAN. */
+  moves: string[];
+  public_id: string;
+  opponent: string;
+  opponent_rating: number | null;
+  /** The player's result in it. */
+  result: GameResult;
+  event: string;
+}

@@ -18,6 +18,7 @@ import { PlayerNewScreen } from "@/screens/PlayerNewScreen";
 import { PlayerDetailScreen } from "@/screens/PlayerDetailScreen";
 import { PlayerGamesScreen } from "@/screens/PlayerGamesScreen";
 import { PlayerPrepScreen } from "@/screens/PlayerPrepScreen";
+import { PlayBotScreen } from "@/screens/PlayBotScreen";
 import { PlayerImportScreen } from "@/screens/PlayerImportScreen";
 import { SessionNewScreen } from "@/screens/SessionNewScreen";
 import { SessionDetailScreen } from "@/screens/SessionDetailScreen";
@@ -85,6 +86,7 @@ export function RootNavigator() {
           <Stack.Screen name="PlayerDetail" component={PlayerDetailScreen} />
           <Stack.Screen name="PlayerGames" component={PlayerGamesScreen} />
           <Stack.Screen name="PlayerPrep" component={PlayerPrepScreen} />
+          <Stack.Screen name="PlayBot" component={PlayBotScreen} />
           <Stack.Screen name="PlayerImport" component={PlayerImportScreen} />
           <Stack.Screen name="SessionNew" component={SessionNewScreen} />
           <Stack.Screen name="SessionDetail" component={SessionDetailScreen} />

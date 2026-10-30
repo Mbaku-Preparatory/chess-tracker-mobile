@@ -24,6 +24,7 @@ export type RootStackParamList = {
   PlayerGames: { slug: string };
   PlayerPrep: { slug: string; tab?: "tree" | "studies" | "ask" };
   PlayerImport: { slug: string; source?: "chesscom" | "lichess" | "chess_results" | "pgn" };
+  PlayBot: { slug: string };
   SessionNew: undefined;
   SessionDetail: { id: number };
   // The game travels with the route: every list that opens one already holds
