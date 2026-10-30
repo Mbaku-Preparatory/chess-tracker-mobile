@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
+import { gameSource, tint } from "@/lib/games";
 import { useTheme } from "@/theme/ThemeContext";
 
 type BadgeVariant = "default" | "eco" | "win" | "draw" | "loss" | "white" | "black";
@@ -41,28 +42,11 @@ export function EcoBadge({ code }: { code: string }) {
   return <Badge label={code} variant="eco" />;
 }
 
-const SOURCE_COLORS: Record<string, { bg: string; fg: string; border: string }> = {
-  chess_com: { bg: "rgba(127,166,80,0.12)", fg: "#4a6e2e", border: "rgba(127,166,80,0.35)" },
-  lichess: { bg: "rgba(176,80,0,0.12)", fg: "#7a3800", border: "rgba(176,80,0,0.35)" },
-  chess_results: { bg: "rgba(26,58,107,0.12)", fg: "#1a3a6b", border: "rgba(26,58,107,0.35)" },
-  pgn_import: { bg: "#f5f3ff", fg: "#6d28d9", border: "#ddd6fe" },
-  manual: { bg: "#f3f4f6", fg: "#4b5563", border: "#e5e7eb" },
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  chess_com: "Chess.com",
-  lichess: "Lichess",
-  chess_results: "OTB",
-  pgn_import: "PGN",
-  manual: "Manual",
-};
-
 export function SourceBadge({ source }: { source: string }) {
-  const c = SOURCE_COLORS[source] ?? SOURCE_COLORS.manual;
-  const label = SOURCE_LABELS[source] ?? source;
+  const s = gameSource(source);
   return (
-    <View style={[st.badge, { backgroundColor: c.bg, borderColor: c.border }]}>
-      <Text style={[st.badgeText, { color: c.fg }]}>{label}</Text>
+    <View style={[st.badge, { backgroundColor: tint(s.color, 0.12), borderColor: tint(s.color, 0.35) }]}>
+      <Text style={[st.badgeText, { color: s.text }]}>{s.short}</Text>
     </View>
   );
 }

@@ -108,6 +108,7 @@ export const api = {
     if (filters?.min_rating) params.set("min_rating", filters.min_rating);
     if (filters?.max_rating) params.set("max_rating", filters.max_rating);
     if (filters?.page) params.set("page", String(filters.page));
+    if (filters?.page_size) params.set("page_size", String(filters.page_size));
     return fetchJson(`${API_BASE}/players/${slug}/games/?${params}`);
   },
 

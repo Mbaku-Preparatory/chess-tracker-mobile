@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { api } from "@/lib/api";
@@ -7,8 +7,9 @@ import { useTheme } from "@/theme/ThemeContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ColorBadge, EcoBadge } from "@/components/ui/Badge";
+import { GameFilters, NO_FILTERS, hasFilters, type GameFilterValues } from "./GameFilters";
 import { GamesTable } from "./GamesTable";
-import type { ColorChoice, Game, GameResult, GameSource, OpeningStat, PaginatedResponse } from "@/types";
+import type { Game, GameResult, GameSource, OpeningStat, PaginatedResponse } from "@/types";
 
 interface FamilyGroup {
   family: string;
@@ -157,39 +158,13 @@ function FamilyRow({ group, slug, sourceFilter, resultFilter, yearFilter }: { gr
   );
 }
 
-const SOURCE_OPTIONS: { value: GameSource | ""; label: string }[] = [
-  { value: "", label: "All sources" },
-  { value: "chess_results", label: "OTB" },
-  { value: "chess_com", label: "Chess.com" },
-  { value: "lichess", label: "Lichess" },
-  { value: "pgn_import", label: "PGN import" },
-  { value: "manual", label: "Manual" },
-];
-const RESULT_OPTIONS: { value: GameResult | ""; label: string }[] = [
-  { value: "", label: "All results" },
-  { value: "win", label: "Wins" },
-  { value: "draw", label: "Draws" },
-  { value: "loss", label: "Losses" },
-];
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  const t = useTheme();
-  return (
-    <Pressable onPress={onPress} style={[st.chip, { backgroundColor: active ? t.brand(600) : t.elevated }]}>
-      <Text style={{ fontSize: 11, fontWeight: "600", color: active ? "#fff" : t.textMuted }}>{label}</Text>
-    </Pressable>
-  );
-}
-
 export function OpeningTreeView({ slug }: { slug: string }) {
   const t = useTheme();
   const [families, setFamilies] = useState<FamilyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [colorFilter, setColorFilter] = useState<"" | ColorChoice>("");
-  const [sourceFilter, setSourceFilter] = useState<GameSource | "">("");
-  const [resultFilter, setResultFilter] = useState<GameResult | "">("");
-  const [openingSearch, setOpeningSearch] = useState("");
+  const [filters, setFilters] = useState<GameFilterValues>(NO_FILTERS);
+  const { color: colorFilter, source: sourceFilter, result: resultFilter } = filters;
 
   useEffect(() => {
     setLoading(true);
@@ -200,7 +175,7 @@ export function OpeningTreeView({ slug }: { slug: string }) {
       .finally(() => setLoading(false));
   }, [slug, sourceFilter, resultFilter]);
 
-  const needle = openingSearch.trim().toLowerCase();
+  const needle = filters.search.trim().toLowerCase();
   const filtered = families
     .map((f) => {
       let vars = f.variations;
@@ -210,35 +185,16 @@ export function OpeningTreeView({ slug }: { slug: string }) {
     })
     .filter((f) => f.variations.length > 0);
 
-  const hasActiveFilters = Boolean(colorFilter || sourceFilter || resultFilter || openingSearch);
+  const hasActiveFilters = hasFilters(filters);
 
   return (
     <View>
-      <TextInput
-        value={openingSearch}
-        onChangeText={setOpeningSearch}
-        placeholder="Search openings… e.g. Sicilian, B12"
-        placeholderTextColor={t.textFaint}
-        style={[st.search, { borderColor: t.border, color: t.text, backgroundColor: t.surface }]}
+      <GameFilters
+        value={filters}
+        onChange={setFilters}
+        searchPlaceholder="Search openings… e.g. Sicilian, B12"
+        count={loading ? undefined : `${filtered.length} opening ${filtered.length === 1 ? "family" : "families"}`}
       />
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 10 }}>
-        {(["", "white", "black"] as const).map((c) => (
-          <Chip key={c} label={c === "" ? "All colors" : c === "white" ? "As White" : "As Black"} active={colorFilter === c} onPress={() => setColorFilter(c)} />
-        ))}
-        <View style={[st.sep, { backgroundColor: t.border }]} />
-        {RESULT_OPTIONS.map((r) => (
-          <Chip key={r.value} label={r.label} active={resultFilter === r.value} onPress={() => setResultFilter(r.value)} />
-        ))}
-      </ScrollView>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 12 }}>
-        {SOURCE_OPTIONS.map((o) => (
-          <Chip key={o.value} label={o.label} active={sourceFilter === o.value} onPress={() => setSourceFilter(o.value)} />
-        ))}
-      </ScrollView>
-
-      {!loading && <Text style={{ fontSize: 11, color: t.textFaint, marginBottom: 10 }}>{filtered.length} opening family{filtered.length !== 1 ? "ies" : ""}</Text>}
 
       {error ? (
         <Text style={{ color: t.danger, fontSize: 13 }}>{error}</Text>
@@ -260,9 +216,6 @@ export function OpeningTreeView({ slug }: { slug: string }) {
 }
 
 const st = StyleSheet.create({
-  search: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingHorizontal: 12, height: 42, fontSize: 13 },
-  chip: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999 },
-  sep: { width: StyleSheet.hairlineWidth, height: 20, alignSelf: "center", marginHorizontal: 2 },
   track: { width: 50, height: 5, borderRadius: 3, overflow: "hidden" },
   fill: { height: "100%", borderRadius: 3 },
   varRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10 },

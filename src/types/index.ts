@@ -141,6 +141,8 @@ export interface GamesFilter {
   min_rating?: string;
   max_rating?: string;
   page?: number;
+  /** Games per page; the server pages by 25 when it is left out (at most 100). */
+  page_size?: number;
 }
 
 export interface ChessComFetchMeta {

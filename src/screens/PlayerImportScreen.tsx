@@ -6,12 +6,12 @@ import * as FileSystem from "expo-file-system/legacy";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
+import { GAME_SOURCES } from "@/lib/games";
 import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { ChessComImportSection } from "@/components/import/ChessComImportSection";
-import { LichessImportSection } from "@/components/import/LichessImportSection";
+import { OnlineImportSection } from "@/components/import/OnlineImportSection";
 import { ChessResultsImportSection } from "@/components/import/ChessResultsImportSection";
 import { ImportResultPanel } from "@/components/import/ImportResultPanel";
 import type { RootStackParamList } from "@/navigation/types";
@@ -24,10 +24,10 @@ type Color = "auto" | "white" | "black";
 type ImportSource = "chesscom" | "lichess" | "chess_results" | "pgn";
 
 const SOURCE_TABS: { id: ImportSource; label: string; color: string }[] = [
-  { id: "chess_results", label: "OTB", color: "#1a3a6b" },
-  { id: "chesscom", label: "Chess.com", color: "#7fa650" },
-  { id: "lichess", label: "Lichess", color: "#b05000" },
-  { id: "pgn", label: "PGN file", color: "#6b7280" },
+  { id: "chess_results", label: GAME_SOURCES.chess_results.label, color: GAME_SOURCES.chess_results.color },
+  { id: "chesscom", label: GAME_SOURCES.chess_com.label, color: GAME_SOURCES.chess_com.color },
+  { id: "lichess", label: GAME_SOURCES.lichess.label, color: GAME_SOURCES.lichess.color },
+  { id: "pgn", label: "PGN file", color: GAME_SOURCES.pgn_import.color },
 ];
 
 const COLOR_OPTIONS: { value: Color; label: string; hint: string }[] = [
@@ -156,10 +156,10 @@ export function PlayerImportScreen({ route, navigation }: Props) {
       </View>
 
       {activeSource === "chesscom" && (
-        <ChessComImportSection slug={slug} accounts={player.accounts ?? []} onUpdated={refreshPlayer} />
+        <OnlineImportSection platform="chesscom" slug={slug} accounts={player.accounts ?? []} onUpdated={refreshPlayer} />
       )}
       {activeSource === "lichess" && (
-        <LichessImportSection slug={slug} accounts={player.accounts ?? []} onUpdated={refreshPlayer} />
+        <OnlineImportSection platform="lichess" slug={slug} accounts={player.accounts ?? []} onUpdated={refreshPlayer} />
       )}
       {activeSource === "chess_results" && (
         <ChessResultsImportSection slug={slug} playerRef={playerRef} fideId={player.fide_id} />

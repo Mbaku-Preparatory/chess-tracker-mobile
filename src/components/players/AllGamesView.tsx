@@ -1,60 +1,15 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 
+import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
 import { gameRef } from "@/lib/gameRef";
+import { GAMES_PAGE_SIZE } from "@/lib/games";
 import { useTheme } from "@/theme/ThemeContext";
+import type { Game, PaginatedResponse } from "@/types";
+
+import { GameFilters, NO_FILTERS, hasFilters, ratingParams, type GameFilterValues } from "./GameFilters";
 import { GamesTable } from "./GamesTable";
-import { Button } from "@/components/ui/Button";
-import type { ColorChoice, Game, GameResult, GameSource, PaginatedResponse } from "@/types";
-
-const SOURCE_OPTIONS: { value: GameSource | ""; label: string }[] = [
-  { value: "", label: "All sources" },
-  { value: "chess_results", label: "OTB" },
-  { value: "chess_com", label: "Chess.com" },
-  { value: "lichess", label: "Lichess" },
-  { value: "pgn_import", label: "PGN import" },
-  { value: "manual", label: "Manual" },
-];
-
-const RESULT_OPTIONS: { value: GameResult | ""; label: string }[] = [
-  { value: "", label: "All results" },
-  { value: "win", label: "Wins" },
-  { value: "draw", label: "Draws" },
-  { value: "loss", label: "Losses" },
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = [
-  { value: "", label: "All years" },
-  ...Array.from({ length: CURRENT_YEAR - 2009 }, (_, i) => String(CURRENT_YEAR - i)).map((y) => ({ value: y, label: y })),
-];
-
-// Opponent-rating bands. `value` is "<min>-<max>", either side may be blank.
-const RATING_OPTIONS = [
-  { value: "", label: "All ratings" },
-  { value: "-1599", label: "<1600" },
-  { value: "1600-1799", label: "1600–1799" },
-  { value: "1800-1999", label: "1800–1999" },
-  { value: "2000-2199", label: "2000–2199" },
-  { value: "2200-2399", label: "2200–2399" },
-  { value: "2400-", label: "2400+" },
-];
-
-function ratingParams(band: string): { min_rating?: string; max_rating?: string } {
-  if (!band) return {};
-  const [min, max] = band.split("-");
-  return { ...(min ? { min_rating: min } : {}), ...(max ? { max_rating: max } : {}) };
-}
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  const t = useTheme();
-  return (
-    <Pressable onPress={onPress} style={[st.chip, { backgroundColor: active ? t.brand(600) : t.elevated }]}>
-      <Text style={{ fontSize: 11, fontWeight: "600", color: active ? "#fff" : t.textMuted }}>{label}</Text>
-    </Pressable>
-  );
-}
 
 export function AllGamesView({ slug }: { slug: string }) {
   const t = useTheme();
@@ -63,13 +18,7 @@ export function AllGamesView({ slug }: { slug: string }) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [colorFilter, setColorFilter] = useState<ColorChoice | "">("");
-  const [resultFilter, setResultFilter] = useState<GameResult | "">("");
-  const [sourceFilter, setSourceFilter] = useState<GameSource | "">("");
-  const [yearFilter, setYearFilter] = useState("");
-  const [ratingFilter, setRatingFilter] = useState("");
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<GameFilterValues>(NO_FILTERS);
 
   function handleGameDeleted(gameId: string) {
     setGames((prev) => prev.filter((g) => gameRef(g) !== gameId));
@@ -77,21 +26,21 @@ export function AllGamesView({ slug }: { slug: string }) {
   }
 
   useEffect(() => {
-    setPage(1);
-  }, [colorFilter, resultFilter, sourceFilter, yearFilter, ratingFilter, search]);
-
-  useEffect(() => {
     setLoading(true);
     setError(null);
+    const { color, result, source, year, rating, search } = filters;
     api
       .getPlayerGames(slug, {
-        ...(colorFilter ? { color_played: colorFilter } : {}),
-        ...(resultFilter ? { result: resultFilter } : {}),
-        ...(sourceFilter ? { source: sourceFilter } : {}),
-        ...(yearFilter ? { year: yearFilter } : {}),
-        ...ratingParams(ratingFilter),
+        ...(color ? { color_played: color } : {}),
+        ...(result ? { result } : {}),
+        ...(source ? { source } : {}),
+        ...(year ? { year } : {}),
+        ...ratingParams(rating),
         ...(search ? { search } : {}),
         page,
+        // Said, not assumed: left out, the server pages by 25, and the page
+        // count below (by 20) ran past the last page.
+        page_size: GAMES_PAGE_SIZE,
       })
       .then((data: PaginatedResponse<Game>) => {
         setGames(data.results);
@@ -99,52 +48,24 @@ export function AllGamesView({ slug }: { slug: string }) {
       })
       .catch(() => setError("Failed to load games."))
       .finally(() => setLoading(false));
-  }, [slug, colorFilter, resultFilter, sourceFilter, yearFilter, ratingFilter, search, page]);
+  }, [slug, filters, page]);
 
-  const totalPages = Math.ceil(total / 20);
-  const hasActiveFilters = Boolean(
-    colorFilter || resultFilter || sourceFilter || yearFilter || ratingFilter || search
-  );
+  const totalPages = Math.ceil(total / GAMES_PAGE_SIZE);
 
   return (
     <View>
-      <TextInput
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Search opponent, event, opening…"
-        placeholderTextColor={t.textFaint}
-        style={[st.search, { borderColor: t.border, color: t.text, backgroundColor: t.surface }]}
+      <GameFilters
+        value={filters}
+        onChange={(f) => {
+          // In the same render as the filter: page 5 of the old list may not exist in the new one.
+          setFilters(f);
+          setPage(1);
+        }}
+        showYear
+        showRating
+        searchPlaceholder="Search opponent, event, opening…"
+        count={loading ? undefined : `${total} game${total !== 1 ? "s" : ""}`}
       />
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 10 }}>
-        {(["", "white", "black"] as const).map((c) => (
-          <Chip key={c} label={c === "" ? "All colors" : c === "white" ? "As White" : "As Black"} active={colorFilter === c} onPress={() => setColorFilter(c)} />
-        ))}
-        <View style={[st.sep, { backgroundColor: t.border }]} />
-        {RESULT_OPTIONS.map((r) => (
-          <Chip key={r.value} label={r.label} active={resultFilter === r.value} onPress={() => setResultFilter(r.value)} />
-        ))}
-      </ScrollView>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 10 }}>
-        {SOURCE_OPTIONS.map((o) => (
-          <Chip key={o.value} label={o.label} active={sourceFilter === o.value} onPress={() => setSourceFilter(o.value)} />
-        ))}
-        <View style={[st.sep, { backgroundColor: t.border }]} />
-        {YEAR_OPTIONS.slice(0, 8).map((o) => (
-          <Chip key={o.value} label={o.label} active={yearFilter === o.value} onPress={() => setYearFilter(o.value)} />
-        ))}
-      </ScrollView>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 10 }}>
-        {RATING_OPTIONS.map((o) => (
-          <Chip key={o.value} label={o.label} active={ratingFilter === o.value} onPress={() => setRatingFilter(o.value)} />
-        ))}
-      </ScrollView>
-
-      {!loading && (
-        <Text style={{ fontSize: 11, color: t.textFaint, marginBottom: 10 }}>{total} game{total !== 1 ? "s" : ""}</Text>
-      )}
 
       {error ? (
         <Text style={{ color: t.danger, fontSize: 13 }}>{error}</Text>
@@ -163,15 +84,9 @@ export function AllGamesView({ slug }: { slug: string }) {
         </>
       ) : (
         <Text style={{ textAlign: "center", color: t.textFaint, fontSize: 13, paddingVertical: 40 }}>
-          {hasActiveFilters ? "No games match the current filters." : "No games found."}
+          {hasFilters(filters) ? "No games match the current filters." : "No games found."}
         </Text>
       )}
     </View>
   );
 }
-
-const st = StyleSheet.create({
-  search: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingHorizontal: 12, height: 42, fontSize: 13 },
-  chip: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999 },
-  sep: { width: StyleSheet.hairlineWidth, height: 20, alignSelf: "center", marginHorizontal: 2 },
-});
