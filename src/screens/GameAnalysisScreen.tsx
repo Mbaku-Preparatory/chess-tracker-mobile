@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { gameRef } from "@/lib/gameRef";
+import { formatGameDate } from "@/lib/games";
 import { useTheme } from "@/theme/ThemeContext";
 import { ColorBadge, ResultBadge } from "@/components/ui/Badge";
 import { GameReplay, type SideScores } from "@/components/chess/GameReplay";
@@ -45,9 +46,7 @@ function ScoutedGame({ game }: { game: Game }) {
   }, [game.id]);
 
   const color = game.color_played === "black" ? "black" : "white";
-  const dateStr = game.date_played
-    ? new Date(game.date_played).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
-    : null;
+  const dateStr = formatGameDate(game.date_played);
   // Only reached when the PGN carries no name tag for that side.
   const opponent = { name: game.opponent_name, rating: game.opponent_rating ? String(game.opponent_rating) : null };
 

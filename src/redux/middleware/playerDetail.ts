@@ -4,18 +4,22 @@ import { FETCH_PLAYER_DETAIL, FETCH_PLAYER_DETAIL_PENDING } from "@/redux/action
 import { userMessage } from "@/lib/apiError";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// GraphQL sends the choice fields as enum names ("BLACK", "LOSS",
+// "CHESS_RESULTS"); everything else, REST included, uses the values.
+const choice = (v: unknown) => (typeof v === "string" ? v.toLowerCase() : v);
+
 const mapGame = (g: Record<string, unknown>) => ({
   id: g.id,
   event: g.event,
   opponent_name: g.opponentName,
   opponent_rating: g.opponentRating,
-  color_played: g.colorPlayed,
-  result: g.result,
+  color_played: choice(g.colorPlayed),
+  result: choice(g.result),
   eco_code: g.ecoCode,
   opening_name: g.openingName,
   date_played: g.datePlayed,
   num_moves: g.numMoves,
-  source: g.source,
+  source: choice(g.source),
   source_url: g.sourceUrl,
 });
 

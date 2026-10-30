@@ -6,6 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
+import { formatGameDate, gameSource } from "@/lib/games";
 import { useTheme } from "@/theme/ThemeContext";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -44,26 +45,18 @@ function moveLabel(index: number): string {
   return index % 2 === 0 ? `${num}.` : `${num}…`;
 }
 
-const SOURCE_META: Record<string, { label: string; dot: string }> = {
-  chess_results: { label: "OTB", dot: "#f59e0b" },
-  chess_com: { label: "Chess.com", dot: "#10b981" },
-  lichess: { label: "Lichess", dot: "#8b5cf6" },
-  pgn_import: { label: "PGN", dot: "#60a5fa" },
-  manual: { label: "Manual", dot: "#9ca3af" },
-};
-
 function GameRow({ game, onOpen }: { game: Game; onOpen: (g: Game) => void }) {
   const t = useTheme();
-  const meta = SOURCE_META[game.source] ?? { label: game.source, dot: "#9ca3af" };
+  const meta = gameSource(game.source);
   const isOnline = game.source === "chess_com" || game.source === "lichess";
-  const dateStr = game.date_played ? new Date(game.date_played).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : null;
+  const dateStr = formatGameDate(game.date_played);
 
   return (
     <Pressable
       onPress={() => (isOnline && game.source_url ? Linking.openURL(game.source_url) : onOpen(game))}
       style={[st.gameRow, { borderColor: t.border, backgroundColor: t.surface }]}
     >
-      <View style={[st.dot, { backgroundColor: meta.dot }]} />
+      <View style={[st.dot, { backgroundColor: meta.color }]} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ fontSize: 12, fontWeight: "600", color: t.text }} numberOfLines={1}>
           vs {game.opponent_name}{game.opponent_rating ? ` (${game.opponent_rating})` : ""}

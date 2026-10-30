@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { gameRef } from "@/lib/gameRef";
+import { formatGameDate } from "@/lib/games";
 import { useTheme } from "@/theme/ThemeContext";
 import { ColorBadge, EcoBadge, ResultBadge, SourceBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -70,7 +71,7 @@ export function GamesTable({
                   </View>
                   <Text style={{ fontSize: 12, color: t.textMuted, marginTop: 2 }} numberOfLines={1}>
                     {game.event}{game.round ? ` · R${game.round}` : ""}
-                    {game.date_played ? ` · ${new Date(game.date_played).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}` : ""}
+                    {game.date_played ? ` · ${formatGameDate(game.date_played)}` : ""}
                   </Text>
                   {game.opening_name && (
                     <Text style={{ fontSize: 12, color: t.textMuted, marginTop: 2 }} numberOfLines={1}>{game.opening_name}</Text>
