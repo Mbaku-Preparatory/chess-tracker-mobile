@@ -112,6 +112,11 @@ export const api = {
     return fetchJson(`${API_BASE}/players/${slug}/games/?${params}`);
   },
 
+  /** The player's games in one colour, for "Play <player> bot". */
+  getBotBook(slug: string, color: "white" | "black"): Promise<{ games: import("@/types").BotBookGame[] }> {
+    return fetchJson(`${API_BASE}/players/${slug}/bot-book/?color=${color}`);
+  },
+
   getPlayerOpenings(
     slug: string,
     source?: string,

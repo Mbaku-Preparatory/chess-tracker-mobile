@@ -173,6 +173,8 @@ export function PlayerDetailScreen({ route, navigation }: Props) {
           style={{ borderColor: t.brand(600), borderWidth: 1.5 }}
           onPress={() => navigation.navigate("PlayerPrep", { slug, tab: "ask" })}
         />
+        {/* Before Opening Tree, as on the web profile. */}
+        <Button title={`Play ${player.full_name} bot`} variant="secondary" onPress={() => navigation.navigate("PlayBot", { slug })} />
         <Button title="Opening Tree" variant="secondary" onPress={() => navigation.navigate("PlayerPrep", { slug })} />
         <Button title="Import Games" variant="secondary" onPress={() => navigation.navigate("PlayerImport", { slug, source: "chess_results" })} />
       </View>

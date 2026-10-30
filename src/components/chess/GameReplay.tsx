@@ -26,6 +26,7 @@ import Svg, { Circle, Path } from "react-native-svg";
 import { MoveList } from "./MoveList";
 import { useAnalysisLine } from "./useAnalysisLine";
 import Chessboard, { type ChessboardRef } from "react-native-chessboard";
+import { PlayerPlate } from "./PlayerPlate";
 import { EvalBar } from "@/components/ui/EvalBar";
 
 export interface ParsedMove {
@@ -136,37 +137,6 @@ function playersFromHeaders(headers: Record<string, string>): PgnPlayers {
 }
 
 /** One name plate, width-matched to the board so long names truncate. */
-function PlayerPlate({ player, color, width, score }: { player: SidePlayer; color: "white" | "black"; width: number; score?: string | null }) {
-  const t = useTheme();
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, width }}>
-      <View
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: 5,
-          borderWidth: StyleSheet.hairlineWidth,
-          backgroundColor: color === "white" ? "#ffffff" : "#1f2937",
-          borderColor: color === "white" ? "#d1d5db" : "#4b5563",
-        }}
-      />
-      {/* No flex:1 on the name — that would push the score out to the right
-          edge with the rating. The name takes what it needs and truncates,
-          the score sits against it, and marginLeft:"auto" on the rating is
-          what holds the right edge. */}
-      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13, fontWeight: "700", color: t.text }}>
-        {player.name}
-      </Text>
-      {score ? (
-        <Text style={{ fontSize: 13, fontWeight: "800", color: t.text }}>({score})</Text>
-      ) : null}
-      {player.rating ? (
-        <Text style={{ marginLeft: "auto", fontSize: 11, color: t.textMuted }}>{player.rating}</Text>
-      ) : null}
-    </View>
-  );
-}
-
 function NavBtn({ icon, disabled, onPress, color }: { icon: keyof typeof Ionicons.glyphMap; disabled: boolean; onPress: () => void; color: string }) {
   const t = useTheme();
   return (
@@ -352,7 +322,8 @@ export function GameReplay({
                   reads as a rendering fault. */}
               <View style={{ paddingHorizontal: 12 }}>
                 <PlayerPlate
-                  player={top}
+                  name={top.name}
+                  rating={top.rating}
                   color={orientation === "white" ? "black" : "white"}
                   width={boardSize - 24}
                   score={sideScores[orientation === "white" ? "black" : "white"]}
@@ -381,7 +352,8 @@ export function GameReplay({
               )}
               <View style={{ paddingHorizontal: 12 }}>
                 <PlayerPlate
-                  player={bottom}
+                  name={bottom.name}
+                  rating={bottom.rating}
                   color={orientation}
                   width={boardSize - 24}
                   score={sideScores[orientation]}
