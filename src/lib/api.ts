@@ -1,3 +1,4 @@
+import { File as ExpoFile } from "expo-file-system";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
@@ -88,6 +89,21 @@ async function fetchJson<T>(url: string, init?: RequestInit, _retriedAfterRefres
     return res.json();
   } finally {
     requestTracker.decrement();
+  }
+}
+
+/** A PGN the server builds, saved under the name it gives and handed to the
+ * phone's share sheet (save to Files, send to a chess app). */
+async function sharePgnFrom(url: string, fallbackName: string): Promise<void> {
+  const token = authStorage.getToken();
+  const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new Error("The PGN could not be downloaded. Try again in a moment.");
+  const match = (res.headers.get("Content-Disposition") ?? "").match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? fallbackName;
+  const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+  await FileSystem.writeAsStringAsync(fileUri, await res.text(), { encoding: "utf8" });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(fileUri, { mimeType: "application/x-chess-pgn", dialogTitle: filename });
   }
 }
 
@@ -296,20 +312,32 @@ export const api = {
     if (moves.length) params.set("moves", moves.join(","));
     if (color) params.set("color", color);
     if (source) params.set("source", source);
-    const token = authStorage.getToken();
-    const res = await fetch(`${API_BASE}/players/${slug}/prep-games/pgn/?${params}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) throw new Error("Failed to download PGN");
-    const disposition = res.headers.get("Content-Disposition") ?? "";
-    const match = disposition.match(/filename="([^"]+)"/);
-    const filename = match?.[1] ?? "games.pgn";
-    const text = await res.text();
-    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
-    await FileSystem.writeAsStringAsync(fileUri, text, { encoding: "utf8" });
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(fileUri, { mimeType: "application/x-chess-pgn", dialogTitle: filename });
-    }
+    await sharePgnFrom(`${API_BASE}/players/${slug}/prep-games/pgn/?${params}`, "games.pgn");
+  },
+
+  /**
+   * A chess book PDF up for conversion (books/views.py). The same file again
+   * is not converted twice: `duplicate` says so, with the book it already is.
+   */
+  uploadBook(
+    file: { uri: string; name: string; mimeType?: string },
+    options: { notifyEmail?: boolean } = {},
+    signal?: AbortSignal,
+  ): Promise<{ public_id: string; title: string; status: string; duplicate: boolean }> {
+    const body = new FormData();
+    // Expo's fetch (the app's global one since SDK 52) sends a file part only
+    // as a Blob-like with bytes(), which expo-file-system's File is; React
+    // Native's { uri, name, type } part fails with "Unsupported FormDataPart".
+    body.append("file", new ExpoFile(file.uri) as unknown as Blob);
+    // The picker's copy has a name of its own: the title comes from the original.
+    body.append("title", file.name.replace(/\.pdf$/i, ""));
+    if (options.notifyEmail) body.append("notify_email", "true");
+    return fetchJson(`${API_BASE}/books/`, { method: "POST", body, signal });
+  },
+
+  /** An exercise book as one PGN, every exercise with its solution and notes. */
+  async downloadBookPgn(publicId: string): Promise<void> {
+    await sharePgnFrom(`${API_BASE}/books/${encodeURIComponent(publicId)}/pgn/`, "book.pgn");
   },
 
   getMasterGames(params: { eco: string; limit?: number }): Promise<import("@/types").MasterGame[]> {

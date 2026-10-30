@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -24,10 +24,11 @@ import { useTheme } from "@/theme/ThemeContext";
 import Svg, { Circle, Path } from "react-native-svg";
 
 import { MoveList } from "./MoveList";
-import { useAnalysisLine } from "./useAnalysisLine";
+import { START_FEN, useAnalysisLine } from "./useAnalysisLine";
 import Chessboard, { type ChessboardRef } from "react-native-chessboard";
 import { PlayerPlate } from "./PlayerPlate";
 import { EvalBar } from "@/components/ui/EvalBar";
+import { Button } from "@/components/ui/Button";
 
 export interface ParsedMove {
   san: string;
@@ -36,6 +37,8 @@ export interface ParsedMove {
   to: string;
   moveNumber: number;
   color: "w" | "b";
+  /** The annotator's note after this move, when the PGN has one. */
+  comment?: string;
 }
 
 export interface ParsedPgn {
@@ -43,15 +46,20 @@ export interface ParsedPgn {
   result: string | null;
   moves: ParsedMove[];
   players: PgnPlayers;
+  /** Where the moves start (the PGN's FEN tag, else the opening position),
+   * and the note before the first move. */
+  start: { fen: string; comment: string | null };
 }
 
 /**
  * One parse per PGN — the move list and the tag roster both come off the same
  * load. `move.after` is the position following the move, so there is no need to
- * replay the game a second time to collect per-ply FENs.
+ * replay the game a second time to collect per-ply FENs. A PGN with a FEN tag
+ * (a book exercise) starts from that position, and its move numbers with it.
  */
 export function parsePgn(pgn: string | null): ParsedPgn {
-  if (!pgn) return { moves: [], players: { white: null, black: null }, result: null };
+  const empty = { fen: START_FEN, comment: null };
+  if (!pgn) return { moves: [], players: { white: null, black: null }, result: null, start: empty };
   // Held outside the try: chess.js fills the roster before it walks the moves,
   // so a game that throws on an illegal move still has real names on it.
   const chess = new Chess();
@@ -61,21 +69,30 @@ export function parsePgn(pgn: string | null): ParsedPgn {
   } catch {
     loaded = false;
   }
-  const moves = loaded
-    ? chess.history({ verbose: true }).map((move, i) => ({
-        san: move.san,
-        fen: move.after,
-        from: move.from,
-        to: move.to,
-        moveNumber: Math.ceil((i + 1) / 2),
-        color: move.color,
-      }))
-    : [];
   const headers = chess.getHeaders();
+  const startFen = (loaded && headers.FEN) || START_FEN;
+  // chess.js keys each note by the position it follows.
+  const notes = new Map(loaded ? chess.getComments().map((c) => [c.fen, c.comment.trim()]) : []);
+  const moves = loaded
+    ? chess.history({ verbose: true }).map((move) => {
+        const comment = notes.get(move.after);
+        return {
+          san: move.san,
+          fen: move.after,
+          from: move.from,
+          to: move.to,
+          // The number the position says, so a line from a diagram at move 23 is numbered from 23.
+          moveNumber: Number(move.before.split(" ")[5]) || 1,
+          color: move.color,
+          ...(comment ? { comment } : {}),
+        };
+      })
+    : [];
   return {
     moves,
     players: playersFromHeaders(headers),
     result: headers.Result?.trim() || null,
+    start: { fen: startFen, comment: notes.get(new Chess(startFen).fen()) || null },
   };
 }
 
@@ -183,10 +200,20 @@ function EnginePanel({ engine, fen }: { engine: EngineResult; fen: string }) {
   );
 }
 
+const clean = (san: string) => san.replace(/[+#!?]/g, "");
+/** How long the book's reply waits after a right move, so the move is seen. */
+const REPLY_MS = 450;
+
 /**
  * A game on its own screen: the board, the engine (off until switched on), the
  * moves and ways out to Chess.com, Lichess or a PGN file. A stack screen, not
  * a modal, so Android's back button and iOS's swipe-back leave it.
+ *
+ * `solve`, for a book exercise (the web's AnalysisView has the same): the
+ * solution, the engine and the ways out stay hidden until the line is played
+ * on the board or given up. Any legal move can be played: one that is not the
+ * book's opens a line of its own to explore, and Take back returns to the
+ * exercise. Read once, when the game first shows: mount it with its PGN.
  */
 export function GameReplay({
   pgn,
@@ -197,6 +224,7 @@ export function GameReplay({
   filename,
   players,
   scores,
+  solve = false,
 }: {
   pgn: string | null;
   loading?: boolean;
@@ -208,22 +236,99 @@ export function GameReplay({
   players?: { white?: SidePlayer; black?: SidePlayer };
   /** Fallback scores, used only when the PGN carries no Result tag. */
   scores?: SideScores;
+  solve?: boolean;
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [analysisLoading, setAnalysisLoading] = useState<"lichess" | null>(null);
   const boardRef = useRef<ChessboardRef>(null);
 
-  const { moves: gameMoves, players: named, result: resultTag } = useMemo(() => parsePgn(pgn), [pgn]);
+  const { moves: gameMoves, players: named, result: resultTag, start } = useMemo(() => parsePgn(pgn), [pgn]);
 
   // The game is never edited. Playing a move that leaves it opens a branch,
   // and the line below reads the game up to that point followed by the branch.
-  const line = useAnalysisLine(gameMoves);
+  const line = useAnalysisLine(gameMoves, start.fen);
   const { moves, index: currentIndex, fen: currentFen, goTo } = line;
 
+  const [solving, setSolving] = useState(solve && gameMoves.length > 0);
+  // How far into the book's line the solver has got: the moves up to here are
+  // theirs to see and step through; the rest is still the answer.
+  const [solvedUpTo, setSolvedUpTo] = useState(-1);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  // The book's reply is on its way: the board waits for it.
+  const [replying, setReplying] = useState(false);
+  const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (replyTimer.current) clearTimeout(replyTimer.current);
+  }, []);
+
   const [prefs, setPrefs] = useAnalysisPrefs();
-  const engine = useEngine(currentFen, prefs.engine && !loading);
+  // The engine would give the answer away, so it waits until the line is solved.
+  const engine = useEngine(currentFen, prefs.engine && !loading && !solving);
   const bestLine = engine.lines[0] ?? null;
+
+  // Solving: a move from the book's line is checked against the book's next
+  // move. Right, and the book's reply is played after a beat. Any other legal
+  // move is played too, the board is never refused, but as a line of the
+  // solver's own, which they can carry on, step through, or take back.
+  const attempt = useCallback(
+    (from: string, to: string) => {
+      // Already off the book's line: the move just carries it on.
+      if (line.inBranch) return line.play(from, to);
+      const expected = gameMoves[currentIndex + 1];
+      if (!expected) return line.play(from, to);
+      let san: string;
+      try {
+        san = new Chess(currentFen).move({ from, to, promotion: "q" }).san;
+      } catch {
+        return false;
+      }
+      if (clean(san) !== clean(expected.san)) {
+        if (!line.play(from, to)) return false;
+        setFeedback({ ok: false, text: `${san} is not the book's move. Explore it here, or take it back and try again.` });
+        return true;
+      }
+      const reached = currentIndex + 1;
+      line.selectMain(reached);
+      // Stepping back and replaying a move already found keeps what came after.
+      setSolvedUpTo((found) => Math.max(found, reached));
+      const done = () => {
+        setSolving(false);
+        setFeedback({ ok: true, text: "Solved. The book's notes are with the moves below." });
+      };
+      if (!gameMoves[reached + 1]) {
+        done();
+        return true;
+      }
+      setFeedback({ ok: true, text: `${expected.san} is right.` });
+      setReplying(true);
+      replyTimer.current = setTimeout(() => {
+        setReplying(false);
+        line.selectMain(reached + 1);
+        setSolvedUpTo((found) => Math.max(found, reached + 1));
+        if (!gameMoves[reached + 2]) done();
+      }, REPLY_MS);
+      return true;
+    },
+    [gameMoves, currentIndex, currentFen, line],
+  );
+
+  /** Back to where the solver's own line left the book, to try again. */
+  function takeBack() {
+    if (line.branch) line.selectMain(line.branch.fromIndex);
+    setFeedback(null);
+  }
+
+  // While solving, stepping forward along the book's line stops at the last
+  // move found: beyond it is the answer. The solver's own line is theirs.
+  const last = solving && !line.onBranch ? solvedUpTo : moves.length - 1;
+  // The moves found so far, without the book's notes: a note after one often
+  // says what comes next.
+  const listedMoves = useMemo(
+    () => (solving ? gameMoves.slice(0, solvedUpTo + 1).map(({ comment: _, ...m }) => m) : gameMoves),
+    [gameMoves, solving, solvedUpTo],
+  );
+  const toMove = start.fen.split(" ")[1] === "b" ? "Black" : "White";
 
   // The board keeps its own position — its `fen` prop is only a starting one —
   // so ours has to be pushed in whenever it changes. Two things make that
@@ -337,6 +442,7 @@ export function GameReplay({
                 <Chessboard
                   ref={boardRef}
                   fen={currentFen}
+                  gestureEnabled={!replying}
                   flipped={orientation === "black"}
                   boardSize={boardSize}
                   withLetters={false}
@@ -346,7 +452,8 @@ export function GameReplay({
                     if (!move) return;
                     // Ours is the record; the board has already drawn it.
                     cameFromBoard.current = true;
-                    line.play(move.from, move.to);
+                    if (solving) attempt(move.from, move.to);
+                    else line.play(move.from, move.to);
                   }}
                 />
               )}
@@ -361,7 +468,7 @@ export function GameReplay({
               </View>
               {/* Under the board and both names, so it reads as a summary of
                   the position rather than as part of either player's plate. */}
-              {prefs.engine && (
+              {prefs.engine && !solving && (
                 <View style={{ paddingHorizontal: 12, paddingTop: 2 }}>
                   <EvalBar
                     orientation="horizontal"
@@ -376,7 +483,34 @@ export function GameReplay({
             </View>
           </View>
 
-          {prefs.engine && (
+          {(solving || feedback) && (
+            <View style={[st.solvePanel, { backgroundColor: t.surface, borderColor: t.border }]} accessibilityLiveRegion="polite">
+              {solving && (
+                <Text style={{ fontSize: 15, fontWeight: "700", color: t.text }}>
+                  {line.inBranch ? "Your own line, off the book's." : `${toMove} to move. Play the best move on the board.`}
+                </Text>
+              )}
+              {feedback && (
+                <Text style={{ fontSize: 14, fontWeight: "600", color: feedback.ok ? t.brand(600) : t.warning }}>{feedback.text}</Text>
+              )}
+              {solving && (
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {line.onBranch && <Button title="Take back" size="sm" onPress={takeBack} />}
+                  <Button
+                    title="Show solution"
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => {
+                      setSolving(false);
+                      setFeedback(null);
+                    }}
+                  />
+                </View>
+              )}
+            </View>
+          )}
+
+          {prefs.engine && !solving && (
             <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
               <EnginePanel engine={engine} fen={currentFen} />
             </View>
@@ -387,9 +521,11 @@ export function GameReplay({
             {!loading && !error && moves.length === 0 && (
               <Text style={{ color: t.textFaint, fontSize: 13, textAlign: "center" }}>No moves available</Text>
             )}
-            {!loading && moves.length > 0 && (
+            {/* While solving: the moves found so far and the solver's own line;
+                the rest of the book's stays out of sight. */}
+            {!loading && moves.length > 0 && (!solving || solvedUpTo >= 0 || line.branch) && (
               <ScrollView style={st.moveListScroll} nestedScrollEnabled>
-                <MoveList mainMoves={gameMoves} line={line} />
+                <MoveList mainMoves={listedMoves} line={line} intro={solving ? null : start.comment} />
               </ScrollView>
             )}
           </View>
@@ -401,7 +537,8 @@ export function GameReplay({
           and scrolling to the end of a long game to find them made them feel
           like a footnote. Pinned above the move controls, which were already
           fixed for the same reason. */}
-        {pgn && (
+        {/* The PGN, the engine and the other sites all hold the answer. */}
+        {pgn && !solving && (
           <View style={[st.actionsRow, { borderColor: t.border }]}>
             {/* The engine's switch, marked with a chip so it reads as "engine"
                 among icons. Off by default: the evaluation is a choice. */}
@@ -451,8 +588,8 @@ export function GameReplay({
           <Text style={{ minWidth: 60, textAlign: "center", fontSize: 12, color: t.textMuted }}>
             {currentIndex === -1 ? "Start" : `${moves[currentIndex]?.moveNumber ?? ""}${moves[currentIndex]?.color === "w" ? "." : "…"}`}
           </Text>
-          <NavBtn icon="chevron-forward" disabled={currentIndex === moves.length - 1} onPress={() => goTo(currentIndex + 1)} color={t.textMuted} />
-          <NavBtn icon="play-skip-forward" disabled={currentIndex === moves.length - 1} onPress={() => goTo(moves.length - 1)} color={t.textMuted} />
+          <NavBtn icon="chevron-forward" disabled={currentIndex >= last} onPress={() => goTo(currentIndex + 1)} color={t.textMuted} />
+          <NavBtn icon="play-skip-forward" disabled={currentIndex >= last} onPress={() => goTo(last)} color={t.textMuted} />
         </View>
       </View>
   );
@@ -464,6 +601,7 @@ const st = StyleSheet.create({
   scorePill: { minWidth: 54, alignItems: "center", borderRadius: 5, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 5, paddingVertical: 2 },
   boardArea: { alignItems: "center", paddingVertical: 16 },
   moveListWrap: { padding: 16 },
+  solvePanel: { marginHorizontal: 16, marginTop: 16, gap: 10, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 14 },
   moveListScroll: { maxHeight: 260 },
   // Centred, not right-aligned: it sits directly above the move controls now,
   // and two pinned bars disagreeing about their alignment reads as a mistake.

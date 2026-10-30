@@ -35,3 +35,9 @@ export function accountDeletionMailto(username: string): string {
  * at a local web app; unset, it is the real site, never nothing.
  */
 export const ENGINE_URL = process.env.EXPO_PUBLIC_ENGINE_URL || "https://www.chesspreparatory.com/engine.html";
+
+/** A book on the website: where a reader book (a scan) is read, over the
+ * owner's own PDF, until the app has a reader of its own. */
+export function bookOnWebUrl(publicId: string): string {
+  return `https://www.chesspreparatory.com/books/${encodeURIComponent(publicId)}`;
+}

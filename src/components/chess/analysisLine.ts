@@ -62,8 +62,10 @@ export function branchStartsAt(branch: Branch | null): number | null {
   return branch ? branch.fromIndex + 1 : null;
 }
 
-export function fenAt(moves: ParsedMove[], index: number): string {
-  return index >= 0 ? moves[index]?.fen ?? START_FEN : START_FEN;
+/** The position after `moves[index]`; index -1 is where the line starts,
+ * the opening position unless it starts from a diagram (a book exercise). */
+export function fenAt(moves: ParsedMove[], index: number, start: string = START_FEN): string {
+  return index >= 0 ? moves[index]?.fen ?? start : start;
 }
 
 export function legalTargets(fen: string, from: string): string[] {
@@ -85,10 +87,12 @@ export function playMove(
   state: LineState,
   mainMoves: ParsedMove[],
   from: string,
-  to: string
+  to: string,
+  start: string = START_FEN
 ): LineState | null {
   const moves = lineOf(mainMoves, state);
-  const chess = new Chess(fenAt(moves, state.index));
+  const chess = new Chess(fenAt(moves, state.index, start));
+  const moveNumber = chess.moveNumber();
 
   let played;
   try {
@@ -106,7 +110,7 @@ export function playMove(
     fen: played.after,
     from: played.from,
     to: played.to,
-    moveNumber: Math.ceil((state.index + 2) / 2),
+    moveNumber,
     color: played.color,
   };
 

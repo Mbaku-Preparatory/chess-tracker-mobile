@@ -14,7 +14,7 @@ const GRAPHQL_API = process.env.EXPO_PUBLIC_GRAPHQL_API ?? `${API_BASE}/graphql/
 // of fighting axios's RN compatibility issues.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function post(query: string, retriedAfterRefresh = false): Promise<{ data: any }> {
+async function post(query: string, variables?: Record<string, unknown>, retriedAfterRefresh = false): Promise<{ data: any }> {
   const token = authStorage.getToken();
   const res = await fetch(GRAPHQL_API, {
     method: "POST",
@@ -22,7 +22,7 @@ async function post(query: string, retriedAfterRefresh = false): Promise<{ data:
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify(variables ? { query, variables } : { query }),
   });
   const json = await res.json();
 
@@ -50,10 +50,11 @@ async function post(query: string, retriedAfterRefresh = false): Promise<{ data:
     return { data: json };
   }
 
-  return post(query, true);
+  return post(query, variables, true);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const graphqlClient = (config: { data: { query: string } }) => post(config.data.query);
+const graphqlClient = (config: { data: { query: string; variables?: Record<string, unknown> } }) =>
+  post(config.data.query, config.data.variables);
 
 export default graphqlClient;
