@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import Logo from "../components/ui/Logo";
-import { userMessage } from "@/lib/apiError";
+import { loginRefusal } from "@/lib/apiError";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -31,7 +31,12 @@ export function LoginScreen({ navigation }: Props) {
       const data = await api.login(email.trim().toLowerCase(), password);
       dispatch(setAuth({ token: data.access, refreshToken: data.refresh, email: data.email }));
     } catch (err) {
-      setError(userMessage(err, "Login failed."));
+      const refusal = loginRefusal(err);
+      if (refusal.unverifiedEmail) {
+        navigation.navigate("VerifyEmail", { email: refusal.unverifiedEmail });
+        return;
+      }
+      setError(refusal.message);
     } finally {
       setLoading(false);
     }
