@@ -94,3 +94,25 @@ export function userMessage(err: unknown, fallback = GENERIC): string {
   }
   return fallback;
 }
+
+/**
+ * Why the login endpoint refused. Its `detail` is written for this moment, so it
+ * is shown as it is: the status messages above are about a session, and would
+ * tell someone with a wrong password that theirs had expired. An unverified
+ * account also comes back with its address, for the code screen.
+ */
+export function loginRefusal(err: unknown): { message: string; unverifiedEmail?: string } {
+  const { status, body } = err as AppError;
+  const { detail, code, email } = (body ?? {}) as {
+    detail?: unknown;
+    code?: unknown;
+    email?: unknown;
+  };
+  if (code === "email_unverified" && typeof email === "string") {
+    return { message: typeof detail === "string" ? detail : "", unverifiedEmail: email };
+  }
+  if ((status === 401 || status === 403) && typeof detail === "string") {
+    return { message: detail };
+  }
+  return { message: userMessage(err, "Login failed.") };
+}
