@@ -412,6 +412,28 @@ export const api = {
     });
   },
 
+  /** The ID token from Google's account picker. Signs in, creating the
+   * account if there is none (Google has verified the address). */
+  googleSignIn(credential: string): Promise<{ access: string; refresh: string; email: string; created: boolean }> {
+    return fetchJson(`${API_BASE}/auth/google/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential }),
+    });
+  },
+
+  /** The code Lichess or Chess.com sent the app back with. */
+  linkedSignIn(
+    provider: "lichess" | "chesscom",
+    body: { code: string; code_verifier: string; redirect_uri: string }
+  ): Promise<{ access: string; refresh: string; email: string; created: boolean }> {
+    return fetchJson(`${API_BASE}/auth/${provider}/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, connect: false }),
+    });
+  },
+
   me(): Promise<UserProfile> {
     return fetchJson(`${API_BASE}/auth/me/`);
   },

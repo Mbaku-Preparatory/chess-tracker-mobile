@@ -278,6 +278,13 @@ habit, and make sure the policy page names both companies (it does, under
 Chess.com, Lichess, chess-results.org and FIDE are read *from* on the user's
 instruction; no user data is sent to them.
 
+**Signing in with Google, Lichess or Chess.com** (`src/lib/socialAuth.ts`)
+sends nothing *to* them: the person signs in on the provider's own screen, and
+the provider tells *us* their name and email (Google), or account ID, username
+and email (Lichess, Chess.com). That is still "name, email address: collected,
+for account management", the row above, not a new data type. The privacy
+policy already describes all three.
+
 ### What ships in the binary that touches data
 
 | SDK | What leaves the device | Where it is configured |
@@ -285,12 +292,38 @@ instruction; no user data is sent to them.
 | `@sentry/react-native` | Stack traces, device model, OS and app version, navigation breadcrumbs, signed-in email. Not field contents (`sendDefaultPii: false`), off in dev | `src/lib/monitoring.ts` |
 | Mbaku assistant (via our backend) | The question, plus an opponent briefing built from stored game data. No email, no password, no prep notes | `players/services/assistant.py` (backend) |
 
+## Google sign-in on Android
+
+The Google button opens the phone's own account picker. Google only shows it to
+an app whose **package name and signing-key SHA-1** are registered as an
+*Android* OAuth client in the same Google Cloud project as the website's client
+(`chess-preparatory`). Otherwise the picker fails with `DEVELOPER_ERROR`, and
+the app says "Google sign-in isn't set up for this version of the app yet".
+
+One Android client per signing key. Two keys matter:
+
+| Key | Signs | Where its SHA-1 is |
+|---|---|---|
+| **Play App Signing key** | Every install from the Play Store | Play Console → the app → Test and release → **App integrity** → App signing key certificate |
+| **EAS upload key** | `build:apk`, `build:dev`, and the AAB before Play re-signs it | `npx eas-cli credentials` → Android → production → the keystore's SHA1 |
+
+For each: Google Cloud → Google Auth Platform → **Clients → Create client →
+Android**, package `com.chesspreparatory.app`, paste the SHA-1. Nothing goes
+in the app or the backend: the app asks Google for a token issued to the
+*website's* client ID, which the backend already accepts.
+
+Lichess needs nothing registered. **Chess.com** (hidden until
+`EXPO_PUBLIC_CHESSCOM_CLIENT_ID` is set in `eas.json`) also needs
+`com.chesspreparatory.app://auth/chesscom` added to our redirect URIs with
+Chess.com; the application listed only the website's.
+
 ## Still needs a human
 
 - [x] Play Console developer account and identity verification — **cleared 2026-08-17**
 - [ ] **Closed testing track: 12 testers × 14 continuous days.** Start recruiting now; see the warning at the top
 - [ ] Point the Console's privacy policy field at `www.chesspreparatory.com/privacy`
 - [ ] Data safety form — fresh pass, not a reuse. FIDE ID is new
+- [ ] Google sign-in: create the two Android OAuth clients (see "Google sign-in on Android") before building anything testers will use
 - [ ] Store listing: short (80 char) + full (4000 char) description, feature
       graphic (1024×500), 512×512 icon, at least two phone screenshots, app
       category, content rating questionnaire, target audience, ads declaration (none)
