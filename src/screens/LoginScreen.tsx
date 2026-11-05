@@ -84,6 +84,9 @@ export function LoginScreen({ navigation }: Props) {
             isPassword
             textContentType="password"
           />
+          <Pressable onPress={() => navigation.navigate("ForgotPassword")} style={{ alignSelf: "flex-end", marginTop: -6 }}>
+            <Text style={{ color: t.brand(600), fontSize: 13, fontWeight: "600" }}>Forgot password?</Text>
+          </Pressable>
 
           <Button
             title={loading ? "Signing in…" : "Sign in"}
