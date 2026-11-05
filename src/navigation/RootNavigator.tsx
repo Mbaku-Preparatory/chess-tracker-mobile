@@ -11,6 +11,7 @@ import type { MainTabParamList, RootStackParamList } from "./types";
 
 import { LoginScreen } from "@/screens/LoginScreen";
 import { SignupScreen } from "@/screens/SignupScreen";
+import { ForgotPasswordScreen } from "@/screens/ForgotPasswordScreen";
 import { VerifyEmailScreen } from "@/screens/VerifyEmailScreen";
 import { SchedulerScreen } from "@/screens/SchedulerScreen";
 import { PlayersScreen } from "@/screens/PlayersScreen";
@@ -104,6 +105,7 @@ export function RootNavigator() {
         <Stack.Group>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Signup" component={SignupScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
         </Stack.Group>
       )}

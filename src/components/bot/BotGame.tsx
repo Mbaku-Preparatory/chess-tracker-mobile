@@ -13,6 +13,7 @@ import type { LevelBook } from "@/lib/bot/levelBook";
 import { useTheme } from "@/theme/ThemeContext";
 import type { BotBookGame } from "@/types";
 
+import { usePreferences } from "@/components/PreferencesProvider";
 import { BotSpeech, type SpeechChoice } from "./BotSpeech";
 
 /**
@@ -129,6 +130,7 @@ export function BotGame({
   const [alternatives, setAlternatives] = useState<Alternatives | null>(null);
   const opener = botColor === "white" ? "Let's play. I'll open the way I do in my games." : "Let's play. Your move: I'll answer the way I do in my games.";
   const [speech, setSpeech] = useState(opener);
+  const { preferences } = usePreferences();
   const singleRef = useRef<string | null>(null);
   const [resigned, setResigned] = useState(false);
   const [thinking, setThinking] = useState(false);
@@ -333,7 +335,8 @@ export function BotGame({
 
   return (
     <View style={{ gap: 12 }}>
-      <BotSpeech avatarUrl={botAvatarUrl} text={speech} choices={choices} />
+      {/* "The bot talks" in Account; off, the bubble and its choices go, as on the website. */}
+      {preferences.bot_speech && <BotSpeech avatarUrl={botAvatarUrl} text={speech} choices={choices} />}
 
       <View style={{ alignItems: "center", gap: 8 }}>
         <PlayerPlate name={name} rating={botRating} color={botColor} width={plateWidth} tag={`Bot · ${elo}`} avatarUrl={botAvatarUrl} />

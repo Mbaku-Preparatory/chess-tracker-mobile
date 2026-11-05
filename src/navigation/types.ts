@@ -11,6 +11,7 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
+  ForgotPassword: undefined;
   VerifyEmail: { email: string };
   // Typed as nested params so `navigate("MainTabs", { screen: "Players" })` type-checks.
   // "Players" is deliberately NOT listed as a root screen: it lives in MainTabs, and a

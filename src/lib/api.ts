@@ -24,6 +24,7 @@ import type {
   PrepSession,
   PrepSummary,
   Linked,
+  Preferences,
   UserProfile,
 } from "@/types";
 import type { Provider, ProviderCode } from "@/lib/socialAuth";
@@ -469,8 +470,34 @@ export const api = {
     });
   },
 
+  /** The same answer whether or not the email has an account. */
+  forgotPassword(email: string): Promise<{ detail: string }> {
+    return fetchJson(`${API_BASE}/auth/password/forgot/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword(email: string, code: string, password: string): Promise<{ detail: string }> {
+    return fetchJson(`${API_BASE}/auth/password/reset/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, password }),
+    });
+  },
+
   me(): Promise<UserProfile> {
     return fetchJson(`${API_BASE}/auth/me/`);
+  },
+
+  /** Any of the settings switches; the rest stay as they are. */
+  setMyPreferences(preferences: Partial<Preferences>): Promise<UserProfile> {
+    return fetchJson(`${API_BASE}/auth/me/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preferences }),
+    });
   },
 
   updateMe(firstName: string, lastName: string): Promise<UserProfile> {

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { PrepSummaryPanel } from "@/components/players/PrepSummaryPanel";
 import { OpeningStudyPlan } from "@/components/players/OpeningStudyPlan";
 import { AskAssistant } from "@/components/players/AskAssistant";
+import { usePreferences } from "@/components/PreferencesProvider";
 import type { RootStackParamList } from "@/navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PlayerPrep">;
@@ -24,7 +25,10 @@ export function PlayerPrepScreen({ route, navigation }: Props) {
   const dispatch = useAppDispatch();
   const { player, loading } = useAppSelector((s) => s.playerDetail);
   // `tab` lets the profile screen deep-link straight into Mbaku.
-  const [tab, setTab] = useState<PrepTab>(initialTab ?? "tree");
+  const [chosen, setTab] = useState<PrepTab>(initialTab ?? "tree");
+  // Ask is Mbaku, which is off until switched on in Account (as on the website).
+  const { preferences } = usePreferences();
+  const tab: PrepTab = chosen === "ask" && !preferences.mbaku_enabled ? "tree" : chosen;
 
   useEffect(() => {
     if (slug) dispatch(fetchPlayerDetail(slug));
@@ -50,7 +54,7 @@ export function PlayerPrepScreen({ route, navigation }: Props) {
       />
 
       <View style={[st.tabBar, { borderColor: t.border, backgroundColor: t.elevated }]}>
-        {([{ id: "tree", label: "Opening Tree", icon: "git-branch-outline" }, { id: "studies", label: "Opening Studies", icon: "book-outline" }, { id: "ask", label: "Ask", icon: "chatbubble-ellipses-outline" }] as { id: PrepTab; label: string; icon: keyof typeof Ionicons.glyphMap }[]).map((tb) => (
+        {([{ id: "tree", label: "Opening Tree", icon: "git-branch-outline" }, { id: "studies", label: "Opening Studies", icon: "book-outline" }, { id: "ask", label: "Ask", icon: "chatbubble-ellipses-outline" }] as { id: PrepTab; label: string; icon: keyof typeof Ionicons.glyphMap }[]).filter((tb) => tb.id !== "ask" || preferences.mbaku_enabled).map((tb) => (
           <Pressable key={tb.id} onPress={() => setTab(tb.id)} style={[st.tab, tab === tb.id ? { backgroundColor: t.surface } : null]}>
             <Ionicons name={tb.icon} size={14} color={tab === tb.id ? t.text : t.textMuted} />
             <Text style={{ fontSize: 12, fontWeight: "600", color: tab === tb.id ? t.text : t.textMuted }}>{tb.label}</Text>
