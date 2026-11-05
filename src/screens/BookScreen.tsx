@@ -1,14 +1,14 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { FlatList, Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
+import { BookReaderWeb } from "@/components/books/BookReaderWeb";
 import { Screen } from "@/components/layout/Screen";
 import { Button } from "@/components/ui/Button";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
 import { getBook, type BookDetail, type BookExerciseSummary } from "@/lib/books";
-import { bookOnWebUrl } from "@/lib/links";
 import type { RootStackParamList } from "@/navigation/types";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -23,7 +23,7 @@ const n = (x: number) => x.toLocaleString("en");
 /**
  * An exercise book, as on the web (components/books/BookExercises.tsx there):
  * what came out of it, what the book itself got wrong, and every exercise to
- * open. A reader book is read on the website.
+ * open. A reader book opens in the website's reader (BookReaderWeb).
  */
 export function BookScreen({ route, navigation }: Props) {
   const { publicId } = route.params;
@@ -61,12 +61,8 @@ export function BookScreen({ route, navigation }: Props) {
 
   if (book.kind === "reader") {
     return (
-      <Screen>
-        <Text style={{ fontSize: 20, fontWeight: "800", color: t.text }}>{book.title}</Text>
-        <Text style={{ fontSize: 14, color: t.textMuted, marginTop: 8 }}>
-          This book is read on the website, over your own copy of the PDF: every move in it opens on the board.
-        </Text>
-        <Button title="Read on the website" onPress={() => void Linking.openURL(bookOnWebUrl(book.publicId))} style={{ marginTop: 16 }} />
+      <Screen scroll={false} padded={false}>
+        <BookReaderWeb publicId={book.publicId} />
       </Screen>
     );
   }

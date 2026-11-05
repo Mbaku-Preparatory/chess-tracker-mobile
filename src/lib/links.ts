@@ -13,6 +13,10 @@
  * serves an unrelated chess site. See RELEASING.md.
  */
 
+/** The website, with no trailing slash: its origin. EXPO_PUBLIC_SITE_URL
+ * points a local build at a local web app; unset, it is the real site. */
+export const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || "https://www.chesspreparatory.com";
+
 export const PRIVACY_POLICY_URL = "https://www.chesspreparatory.com/privacy";
 
 /**
@@ -21,10 +25,10 @@ export const PRIVACY_POLICY_URL = "https://www.chesspreparatory.com/privacy";
  * src/lib/engine/EngineHost.tsx. EXPO_PUBLIC_ENGINE_URL points a local build
  * at a local web app; unset, it is the real site, never nothing.
  */
-export const ENGINE_URL = process.env.EXPO_PUBLIC_ENGINE_URL || "https://www.chesspreparatory.com/engine.html";
+export const ENGINE_URL = process.env.EXPO_PUBLIC_ENGINE_URL || `${SITE_URL}/engine.html`;
 
-/** A book on the website: where a reader book (a scan) is read, over the
- * owner's own PDF, until the app has a reader of its own. */
-export function bookOnWebUrl(publicId: string): string {
-  return `https://www.chesspreparatory.com/books/${encodeURIComponent(publicId)}`;
+/** The website's book reader without the site's navigation (app/(embed) on
+ * the web), which the app shows in a WebView: components/books/BookReaderWeb. */
+export function bookReaderUrl(publicId: string): string {
+  return `${SITE_URL}/embed/books/${encodeURIComponent(publicId)}`;
 }
