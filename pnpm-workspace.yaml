@@ -1,17 +1,11 @@
-# pnpm settings live here from 10.16 onward — the `pnpm` field in package.json
-# is no longer read, which is what broke EAS build 74a7a562: locally that field
-# was merely ignored with a warning, but the newer pnpm on EAS treats an
-# unapproved build script as ERR_PNPM_IGNORED_BUILDS and fails the install.
-#
-# @sentry/cli arrives via @sentry/react-native. Its postinstall fetches a
-# binary, which the platform package @sentry/cli-linux-x64 already provides —
-# so this approval is about letting the install finish, not about needing the
-# script to do anything.
-#
-# @shopify/react-native-skia's postinstall copies its prebuilt native libraries
-# into libs/. Skipped, the Android build fails with "Skia prebuilt binaries not
-# found" (it did on 2026-10-27, after a clean install): the approval for it sat
-# in .npmrc, which pnpm does not read for this setting.
 onlyBuiltDependencies:
   - '@sentry/cli'
   - '@shopify/react-native-skia'
+
+# The board library, patched (two small changes, both marked "[chess-preparatory
+# patch]"): the legal square under a dragged piece is lit, and a capture shows
+# a ring instead of a dot, as on the website (components/analysis/Board.tsx
+# there). Updating react-native-chessboard means re-making this patch:
+# `pnpm patch react-native-chessboard@<new>`, reapply, `pnpm patch-commit`.
+patchedDependencies:
+  react-native-chessboard@0.2.0: patches/react-native-chessboard@0.2.0.patch

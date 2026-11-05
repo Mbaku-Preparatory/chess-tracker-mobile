@@ -88,7 +88,9 @@ export function playMove(
   mainMoves: ParsedMove[],
   from: string,
   to: string,
-  start: string = START_FEN
+  start: string = START_FEN,
+  // The piece a pawn becomes, which the board's picker asks for. Ignored otherwise.
+  promotion: string = "q"
 ): LineState | null {
   const moves = lineOf(mainMoves, state);
   const chess = new Chess(fenAt(moves, state.index, start));
@@ -96,10 +98,7 @@ export function playMove(
 
   let played;
   try {
-    // Always a queen. Under-promotion is rare enough that asking every time
-    // costs more than it saves, and a known simplification beats a silent
-    // wrong guess.
-    played = chess.move({ from, to, promotion: "q" });
+    played = chess.move({ from, to, promotion });
   } catch {
     return null;
   }

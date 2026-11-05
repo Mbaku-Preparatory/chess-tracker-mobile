@@ -272,19 +272,19 @@ export function GameReplay({
   // move is played too, the board is never refused, but as a line of the
   // solver's own, which they can carry on, step through, or take back.
   const attempt = useCallback(
-    (from: string, to: string) => {
+    (from: string, to: string, promotion?: string) => {
       // Already off the book's line: the move just carries it on.
-      if (line.inBranch) return line.play(from, to);
+      if (line.inBranch) return line.play(from, to, promotion);
       const expected = gameMoves[currentIndex + 1];
-      if (!expected) return line.play(from, to);
+      if (!expected) return line.play(from, to, promotion);
       let san: string;
       try {
-        san = new Chess(currentFen).move({ from, to, promotion: "q" }).san;
+        san = new Chess(currentFen).move({ from, to, promotion }).san;
       } catch {
         return false;
       }
       if (clean(san) !== clean(expected.san)) {
-        if (!line.play(from, to)) return false;
+        if (!line.play(from, to, promotion)) return false;
         setFeedback({ ok: false, text: `${san} is not the book's move. Explore it here, or take it back and try again.` });
         return true;
       }
@@ -452,8 +452,9 @@ export function GameReplay({
                     if (!move) return;
                     // Ours is the record; the board has already drawn it.
                     cameFromBoard.current = true;
-                    if (solving) attempt(move.from, move.to);
-                    else line.play(move.from, move.to);
+                    // move.promotion: the piece chosen in the board's picker.
+                    if (solving) attempt(move.from, move.to, move.promotion);
+                    else line.play(move.from, move.to, move.promotion);
                   }}
                 />
               )}
