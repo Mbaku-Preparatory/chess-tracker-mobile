@@ -15,19 +15,6 @@
 
 export const PRIVACY_POLICY_URL = "https://www.chesspreparatory.com/privacy";
 
-export const SUPPORT_EMAIL = "bakutarb@gmail.com";
-
-/** Prefilled so a deletion request arrives identifiable and unambiguous. */
-export function accountDeletionMailto(username: string): string {
-  const subject = encodeURIComponent("Account deletion request");
-  const body = encodeURIComponent(
-    `Please delete my Chess Preparatory account and all data associated with it.\n\n` +
-      `Username: ${username}\n\n` +
-      `I understand this cannot be undone.`
-  );
-  return `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
-}
-
 /**
  * The site's Stockfish behind a UCI bridge (public/engine.html on the web
  * app), which the app keeps open in a hidden WebView: see

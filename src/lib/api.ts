@@ -23,8 +23,10 @@ import type {
   PlayerLookupResult,
   PrepSession,
   PrepSummary,
+  Linked,
   UserProfile,
 } from "@/types";
+import type { Provider, ProviderCode } from "@/lib/socialAuth";
 import { buildApiError, buildNetworkError } from "@/lib/apiError";
 import { authStorage } from "@/lib/auth";
 import { handleAuthFailure } from "@/lib/handleAuthFailure";
@@ -105,6 +107,16 @@ async function sharePgnFrom(url: string, fallbackName: string): Promise<void> {
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(fileUri, { mimeType: "application/x-chess-pgn", dialogTitle: filename });
   }
+}
+
+/** Lichess and Chess.com sign-in and connect are one endpoint; `connect`
+ * says which (the backend's LinkedSignInView). */
+function postLinked<T>(provider: Provider, code: ProviderCode, connect: boolean): Promise<T> {
+  return fetchJson(`${API_BASE}/auth/${provider}/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...code, connect }),
+  });
 }
 
 export const api = {
@@ -409,6 +421,51 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
+    });
+  },
+
+  /** The ID token from Google's account picker. Signs in, creating the
+   * account if there is none (Google has verified the address). */
+  googleSignIn(credential: string): Promise<{ access: string; refresh: string; email: string; created: boolean }> {
+    return fetchJson(`${API_BASE}/auth/google/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential }),
+    });
+  },
+
+  /** The code Lichess or Chess.com sent the app back with: signs in. */
+  linkedSignIn(provider: Provider, code: ProviderCode): Promise<{ access: string; refresh: string; email: string; created: boolean }> {
+    return postLinked(provider, code, false);
+  },
+
+  /** The same code, from Account: links it to the signed-in account. */
+  linkedConnect(provider: Provider, code: ProviderCode): Promise<{ linked: Linked }> {
+    return postLinked(provider, code, true);
+  },
+
+  /** Unlinks Lichess or Chess.com. Refused while the account has no password. */
+  disconnectLinked(provider: Provider): Promise<{ linked: Linked }> {
+    return fetchJson(`${API_BASE}/auth/${provider}/`, { method: "DELETE" });
+  },
+
+  /** Signs out every other session; the tokens returned keep this one. With
+   * no password yet (a Google or Lichess sign-up), `current` is ignored. */
+  changePassword(current: string, next: string): Promise<{ access: string; refresh: string; email: string }> {
+    return fetchJson(`${API_BASE}/auth/password/change/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ current_password: current, new_password: next }),
+    });
+  },
+
+  /** Deletes the account and everything in it, at once. Confirmed with the
+   * password, or the email address for an account that has none. */
+  deleteAccount(confirm: { password: string } | { confirm_email: string }): Promise<void> {
+    return fetchJson(`${API_BASE}/auth/me/`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(confirm),
     });
   },
 

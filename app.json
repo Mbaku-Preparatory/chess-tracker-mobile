@@ -4,6 +4,7 @@
     "slug": "chess-tracker-mobile-app",
     "version": "1.0.5",
     "orientation": "portrait",
+    "scheme": "com.chesspreparatory.app",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
@@ -49,7 +50,9 @@
       "@sentry/react-native",
       "expo-font",
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      "@react-native-google-signin/google-signin",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

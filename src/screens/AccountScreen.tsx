@@ -6,10 +6,14 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "@/lib/api";
 import { sendTestNotification } from "@/lib/notifications";
 import { APP_VERSION, BUILD_NUMBER } from "@/lib/appVersion";
-import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, accountDeletionMailto } from "@/lib/links";
+import { PRIVACY_POLICY_URL } from "@/lib/links";
 import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
 import { TipSection } from "@/components/TipSection";
+import { AccountSection } from "@/components/account/AccountSection";
+import { ConnectedAccounts } from "@/components/account/ConnectedAccounts";
+import { DeleteAccount } from "@/components/account/DeleteAccount";
+import { PasswordSection } from "@/components/account/PasswordSection";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
@@ -30,17 +34,7 @@ function ReadOnlyRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function LinkRow({
-  label,
-  hint,
-  onPress,
-  danger = false,
-}: {
-  label: string;
-  hint?: string;
-  onPress: () => void;
-  danger?: boolean;
-}) {
+function LinkRow({ label, hint, onPress }: { label: string; hint?: string; onPress: () => void }) {
   const t = useTheme();
   return (
     <Pressable
@@ -52,7 +46,7 @@ function LinkRow({
       ]}
     >
       <View style={{ flex: 1 }}>
-        <Text style={{ color: danger ? t.danger : t.brand(600), fontSize: 14, fontWeight: "500" }}>
+        <Text style={{ color: t.brand(600), fontSize: 14, fontWeight: "500" }}>
           {label}
         </Text>
         {hint && (
@@ -98,6 +92,9 @@ export function AccountScreen({ navigation }: Props) {
     }, [])
   );
 
+  // An account made with Google, Lichess or Chess.com has none until it is set.
+  const hasPassword = profile?.has_password !== false;
+
   const dirty =
     profile !== null && (firstName !== profile.first_name || lastName !== profile.last_name);
 
@@ -138,36 +135,6 @@ export function AccountScreen({ navigation }: Props) {
     }
   }
 
-  function handleDeleteAccount() {
-    Alert.alert(
-      "Delete your account?",
-      "This removes your account and every game, opponent and prep session on it. " +
-        "It cannot be undone.\n\n" +
-        "Deletion is handled by email so we can confirm the request comes from you. " +
-        "We action it and confirm within 30 days.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Email the request",
-          style: "destructive",
-          onPress: async () => {
-            const url = accountDeletionMailto(profile?.username ?? "");
-            try {
-              await Linking.openURL(url);
-            } catch {
-              // A device with no mail client must not be a device with no way
-              // out — fall back to showing the address to write to by hand.
-              Alert.alert(
-                "No email app found",
-                `Send your deletion request to ${SUPPORT_EMAIL} from the address registered to your account.`
-              );
-            }
-          },
-        },
-      ]
-    );
-  }
-
   if (loading) {
     return (
       <Screen>
@@ -179,7 +146,7 @@ export function AccountScreen({ navigation }: Props) {
   return (
     <Screen>
       <Text style={{ fontSize: 22, fontWeight: "800", color: t.text }}>Account</Text>
-      <Text style={{ color: t.textMuted, fontSize: 13, marginTop: 4, marginBottom: 20 }}>
+      <Text style={{ color: t.textMuted, fontSize: 13, marginTop: 4, marginBottom: 4 }}>
         Your profile and app details.
       </Text>
 
@@ -191,17 +158,15 @@ export function AccountScreen({ navigation }: Props) {
 
       {profile && (
         <>
-          <Text style={[st.sectionLabel, { color: t.textMuted }]}>SIGN-IN DETAILS</Text>
-          <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+          <AccountSection label="SIGN-IN DETAILS">
             <ReadOnlyRow label="Username" value={profile.username} />
             <ReadOnlyRow label="Email" value={profile.email} />
-          </View>
+          </AccountSection>
           <Text style={[st.hint, { color: t.textFaint }]}>
             Username and email can&apos;t be changed here — your email is what verified this account.
           </Text>
 
-          <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>YOUR NAME</Text>
-          <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border, padding: 14 }]}>
+          <AccountSection label="YOUR NAME" padded>
             <TextField
               label="First name"
               value={firstName}
@@ -210,7 +175,6 @@ export function AccountScreen({ navigation }: Props) {
               maxLength={150}
               placeholder="First name"
             />
-            <View style={{ height: 12 }} />
             <TextField
               label="Last name"
               value={lastName}
@@ -219,27 +183,31 @@ export function AccountScreen({ navigation }: Props) {
               maxLength={150}
               placeholder="Last name"
             />
-            <View style={{ height: 14 }} />
             <Button
               title="Save changes"
               onPress={handleSave}
               loading={saving}
               disabled={!dirty}
             />
-          </View>
+          </AccountSection>
+
+          <ConnectedAccounts
+            linked={profile.linked}
+            hasPassword={hasPassword}
+            onLinked={(linked) => setProfile({ ...profile, linked })}
+          />
+          <PasswordSection hasPassword={hasPassword} onSet={() => setProfile({ ...profile, has_password: true })} />
         </>
       )}
 
-      <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>NOTIFICATIONS</Text>
-      <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border, padding: 14 }]}>
-        <Text style={{ color: t.textMuted, fontSize: 13, marginBottom: 12 }}>
+      <AccountSection label="NOTIFICATIONS" padded>
+        <Text style={{ color: t.textMuted, fontSize: 13 }}>
           Check that prep session reminders can reach you on this device.
         </Text>
         <Button title="Send a test reminder" variant="secondary" onPress={handleTestNotification} />
-      </View>
+      </AccountSection>
 
-      <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>ABOUT</Text>
-      <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border }]}>
+      <AccountSection label="ABOUT">
         <ReadOnlyRow
           label="App version"
           value={BUILD_NUMBER ? `${APP_VERSION} (build ${BUILD_NUMBER})` : APP_VERSION}
@@ -252,20 +220,11 @@ export function AccountScreen({ navigation }: Props) {
           hint="What we collect, who processes it, and how to get it deleted."
           onPress={handleOpenPrivacy}
         />
-      </View>
+      </AccountSection>
 
-      <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>DANGER ZONE</Text>
-      <View style={[st.card, { backgroundColor: t.surface, borderColor: t.border }]}>
-        {/* Play requires an in-app route to request deletion for any app that
-            lets you create an account. Email is the honest mechanism today —
-            a real DELETE endpoint would be better and is worth building. */}
-        <LinkRow
-          label="Delete my account"
-          hint="Removes your account and all of its data. This cannot be undone."
-          onPress={handleDeleteAccount}
-          danger
-        />
-      </View>
+      {/* Play requires an in-app way to delete an account for any app that
+          lets you create one. This is it, and it deletes at once. */}
+      {profile && <DeleteAccount hasPassword={hasPassword} />}
 
       {/* Support — web only, and deliberately so.
           
@@ -283,10 +242,10 @@ export function AccountScreen({ navigation }: Props) {
           Removing this gate means answering Google's Payments policy first,
           not just deciding the button looks fine. */}
       {Platform.OS === "web" && (
-        <>
-          <Text style={[st.sectionLabel, { color: t.textMuted, marginTop: 24 }]}>SUPPORT</Text>
+        <View style={{ marginTop: 24 }}>
+          <Text style={[st.sectionLabel, { color: t.textMuted }]}>SUPPORT</Text>
           <TipSection />
-        </>
+        </View>
       )}
 
       <View style={{ height: 24 }} />
@@ -298,7 +257,6 @@ export function AccountScreen({ navigation }: Props) {
 
 const st = StyleSheet.create({
   sectionLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, marginBottom: 8 },
-  card: { borderWidth: 1, borderRadius: 12, overflow: "hidden" },
   row: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
@@ -12,6 +12,7 @@ import { TextField } from "@/components/ui/TextField";
 import type { RootStackParamList } from "@/navigation/types";
 import Logo from "../components/ui/Logo";
 import { loginRefusal } from "@/lib/apiError";
+import { SocialSignIn } from "@/components/auth/SocialSignIn";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -43,7 +44,13 @@ export function LoginScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={[st.container, { backgroundColor: t.bg }]}>
+    // Scrolls: with Google and Lichess above the form it can be taller than a
+    // small phone, and taller still with the keyboard open.
+    <ScrollView
+      style={{ flex: 1, backgroundColor: t.bg }}
+      contentContainerStyle={st.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={{ width: "100%", maxWidth: 360 }}>
         <View style={st.header}>
           <Logo size={48} style={{ marginBottom: 14 }} />
@@ -57,6 +64,8 @@ export function LoginScreen({ navigation }: Props) {
               <Text style={{ color: t.danger, fontSize: 13 }}>{error}</Text>
             </View>
           )}
+
+          <SocialSignIn context="signin" onError={setError} />
 
           <TextField
             label="Email or username"
@@ -92,12 +101,12 @@ export function LoginScreen({ navigation }: Props) {
           </Pressable>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const st = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },
+  container: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 20 },
   header: { alignItems: "center", marginBottom: 28 },
   title: { fontSize: 22, fontWeight: "800" },
   subtitle: { marginTop: 4, fontSize: 13 },
