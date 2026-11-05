@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Linking, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, StyleSheet, Switch, Text, View } from "react-native";
 
 import { RetroProgress } from "@/components/books/RetroProgress";
 import { Screen } from "@/components/layout/Screen";
@@ -13,7 +13,6 @@ import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
 import { deleteBook, isConverting, myBooks, type Book } from "@/lib/books";
-import { bookOnWebUrl } from "@/lib/links";
 import type { RootStackParamList } from "@/navigation/types";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -129,9 +128,8 @@ export function BooksScreen() {
     );
   }
 
-  function open(book: Pick<Book, "publicId" | "kind">) {
-    if (book.kind === "reader") void Linking.openURL(bookOnWebUrl(book.publicId));
-    else navigation.navigate("Book", { publicId: book.publicId });
+  function open(book: Pick<Book, "publicId">) {
+    navigation.navigate("Book", { publicId: book.publicId });
   }
 
   return (
@@ -210,7 +208,7 @@ export function BooksScreen() {
               <View style={st.actions}>
                 {book.status === "succeeded" && (
                   <>
-                    <Button title={book.kind === "reader" ? "Read on the website" : "Open"} size="sm" onPress={() => open(book)} />
+                    <Button title={book.kind === "reader" ? "Read" : "Open"} size="sm" onPress={() => open(book)} />
                     {book.kind === "exercises" && (
                       <Button
                         title="Download PGN"
