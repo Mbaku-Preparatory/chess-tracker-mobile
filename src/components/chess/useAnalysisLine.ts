@@ -33,7 +33,7 @@ export interface AnalysisLine {
   inBranch: boolean;
   legalTargets: (from: string) => string[];
   /** False when the move was not legal from here. */
-  play: (from: string, to: string) => boolean;
+  play: (from: string, to: string, promotion?: string) => boolean;
   /** Step along the line the board is following. */
   goTo: (index: number) => void;
   /** Jump to a move of the game itself; the branch stays in the list. */
@@ -54,8 +54,8 @@ export function useAnalysisLine(mainMoves: ParsedMove[], start: string = START_F
   const startsAt = branchStartsAt(state.branch);
 
   const play = useCallback(
-    (from: string, to: string) => {
-      const next = playMove(state, mainMoves, from, to, start);
+    (from: string, to: string, promotion?: string) => {
+      const next = playMove(state, mainMoves, from, to, start, promotion);
       if (!next) return false;
       setState(next);
       return true;

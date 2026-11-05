@@ -1,0 +1,106 @@
+diff --git a/src/components/skia/skia-dots.tsx b/src/components/skia/skia-dots.tsx
+index 5032bfe81a485ff85d710e7d6e4c0a2e8d78347e..df41a024bb0ac3055feee05ed9825953c9cae5fc 100644
+--- a/src/components/skia/skia-dots.tsx
++++ b/src/components/skia/skia-dots.tsx
+@@ -20,18 +20,30 @@ export const SkiaDots: React.FC<SkiaDotsProps> = React.memo(
+     const { pieceSize, flipped } = config;
+     const radius = pieceSize * 0.15;
+     const half = pieceSize / 2;
++    // [chess-preparatory patch] A ring, not a dot, where the move captures.
++    const ringWidth = pieceSize * 0.08;
++    const ringRadius = half - ringWidth / 2;
+ 
+-    const path = useDerivedValue(() => {
+-      const p = Skia.Path.Make();
++    const pathOf = (captures: boolean) => {
++      'worklet';
++      const path = Skia.Path.Make();
+       const moves = boardState.validMoves.get();
+       for (let i = 0; i < moves.length; i++) {
++        if (!!boardState.squares[moves[i]].piece.get() !== captures) continue;
+         const pos = squareToPosition(moves[i], pieceSize, flipped);
+-        p.addCircle(pos.x + half, pos.y + half, radius);
++        path.addCircle(pos.x + half, pos.y + half, captures ? ringRadius : radius);
+       }
+-      return p;
+-    });
++      return path;
++    };
++    const dots = useDerivedValue(() => pathOf(false));
++    const rings = useDerivedValue(() => pathOf(true));
+ 
+-    return <Path path={path} color="rgba(0, 0, 0, 0.3)" opacity={0.5} />;
++    return (
++      <>
++        <Path path={dots} color="rgba(0, 0, 0, 0.3)" opacity={0.5} />
++        <Path path={rings} color="rgba(0, 0, 0, 0.3)" opacity={0.5} style="stroke" strokeWidth={ringWidth} />
++      </>
++    );
+   }
+ );
+ 
+diff --git a/src/hooks/use-board-gesture.ts b/src/hooks/use-board-gesture.ts
+index 92df972f7ec3c671308e8cc0e6cd275469a7144d..4643e79e00eab76ac23a2dc6336f381918975440 100644
+--- a/src/hooks/use-board-gesture.ts
++++ b/src/hooks/use-board-gesture.ts
+@@ -7,6 +7,9 @@ import type { BoardState, BoardConfig } from '../state/types';
+ import { positionToSquare, squareToPosition } from '../state/use-board-state';
+ import type { MoveExecutor } from '../state/move-executor';
+ 
++// [chess-preparatory patch] The colour of the drag-hover square.
++const HOVER_COLOR = 'rgba(246, 195, 68, 0.55)';
++
+ interface UseBoardGestureProps {
+   boardState: BoardState;
+   config: BoardConfig;
+@@ -31,6 +34,9 @@ export const useBoardGesture = ({
+   // Offset between touch point and piece position (to follow finger exactly)
+   const touchOffsetX = useSharedValue(0);
+   const touchOffsetY = useSharedValue(0);
++  // [chess-preparatory patch] The legal square under the dragged piece, lit
++  // through the custom-highlight layer, as chess.com and Lichess do.
++  const hoveredSquare = useSharedValue<Square | null>(null);
+ 
+   // Stable callback for tryMove
+   const handleTryMove = useCallback(
+@@ -57,6 +63,15 @@ export const useBoardGesture = ({
+   );
+ 
+   const gesture = useMemo(() => {
++    const setHover = (next: Square | null) => {
++      'worklet';
++      const prev = hoveredSquare.get();
++      if (prev === next) return;
++      if (prev) boardState.highlights[prev].color.set(null);
++      if (next) boardState.highlights[next].color.set(HOVER_COLOR);
++      hoveredSquare.set(next);
++    };
++
+     const panGesture = Gesture.Pan()
+       .enabled(gestureEnabled)
+       .minDistance(5) // Require some movement before starting drag
+@@ -115,9 +130,16 @@ export const useBoardGesture = ({
+         squareState.translateY.set(
+           event.y - touchOffsetY.get() - pieceSize / 2
+         );
++
++        // The square the piece's centre is over, as onEnd works it out.
++        const overX = Math.max(0, Math.min(squareState.translateX.get() + pieceSize / 2, pieceSize * 8 - 1));
++        const overY = Math.max(0, Math.min(squareState.translateY.get() + pieceSize / 2, pieceSize * 8 - 1));
++        const over = positionToSquare(overX, overY, pieceSize, flipped);
++        setHover(over !== square && boardState.validMoves.get().includes(over) ? over : null);
+       })
+       .onEnd(() => {
+         'worklet';
++        setHover(null);
+         const square = draggedSquare.get();
+         if (!square) return;
+ 
+@@ -199,6 +221,7 @@ export const useBoardGesture = ({
+       })
+       .onFinalize(() => {
+         'worklet';
++        setHover(null);
+         const square = draggedSquare.get();
+         if (square) {
+           const squareState = boardState.squares[square];

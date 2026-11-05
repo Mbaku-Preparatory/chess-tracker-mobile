@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  react-native-chessboard@0.2.0:
+    hash: 7ecf1889a43f1b7a08d87c5f9b4d2446cf282e1083742b565e0a8c2d5f6d023e
+    path: patches/react-native-chessboard@0.2.0.patch
+
 importers:
 
   .:
@@ -97,7 +102,7 @@ importers:
         version: 0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
       react-native-chessboard:
         specifier: ^0.2.0
-        version: 0.2.0(a60f3b8590e37bb4e31d6932327fde15)
+        version: 0.2.0(patch_hash=7ecf1889a43f1b7a08d87c5f9b4d2446cf282e1083742b565e0a8c2d5f6d023e)(a60f3b8590e37bb4e31d6932327fde15)
       react-native-gesture-handler:
         specifier: ^2.32.0
         version: 2.32.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -5832,7 +5837,7 @@ snapshots:
 
   react-is@19.2.8: {}
 
-  react-native-chessboard@0.2.0(a60f3b8590e37bb4e31d6932327fde15):
+  react-native-chessboard@0.2.0(patch_hash=7ecf1889a43f1b7a08d87c5f9b4d2446cf282e1083742b565e0a8c2d5f6d023e)(a60f3b8590e37bb4e31d6932327fde15):
     dependencies:
       '@shopify/react-native-skia': 2.6.2(react-native-reanimated@4.5.1(react-native-worklets@0.10.1(@babel/core@7.29.7)(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.3(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       chess.js: 1.4.0
