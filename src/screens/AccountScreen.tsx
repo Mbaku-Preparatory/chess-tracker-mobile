@@ -13,6 +13,7 @@ import { TipSection } from "@/components/TipSection";
 import { AccountSection } from "@/components/account/AccountSection";
 import { ConnectedAccounts } from "@/components/account/ConnectedAccounts";
 import { DeleteAccount } from "@/components/account/DeleteAccount";
+import { FeatureSwitches } from "@/components/account/FeatureSwitches";
 import { PasswordSection } from "@/components/account/PasswordSection";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
@@ -191,6 +192,7 @@ export function AccountScreen({ navigation }: Props) {
             />
           </AccountSection>
 
+          <FeatureSwitches />
           <ConnectedAccounts
             linked={profile.linked}
             hasPassword={hasPassword}

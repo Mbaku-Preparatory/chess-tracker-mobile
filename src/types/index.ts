@@ -351,7 +351,18 @@ export interface UserProfile {
   date_joined: string;
   /** False for a Google, Lichess or Chess.com sign-up that has not set one. */
   has_password?: boolean;
+  preferences?: Preferences;
   linked?: Linked;
+}
+
+/** The settings switches, saved on the account (the website's Settings has them too). */
+export interface Preferences {
+  /** Mbaku, the assistant: off until switched on. */
+  mbaku_enabled: boolean;
+  /** The bot's speech bubble while you play it. */
+  bot_speech: boolean;
+  /** Ticks "Email me when this is done" on imports. */
+  import_emails: boolean;
 }
 
 /** Other sites' accounts that sign in to this one. */

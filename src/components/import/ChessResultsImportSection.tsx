@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePreferences } from "@/components/PreferencesProvider";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -70,7 +71,12 @@ export function ChessResultsImportSection({
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notifyEmail, setNotifyEmail] = useState(false);
+  // Starts as Account's switch says; the box still changes it for this one.
+  const { preferences, loaded: preferencesLoaded } = usePreferences();
+  const [notifyEmail, setNotifyEmail] = useState(preferences.import_emails);
+  useEffect(() => {
+    if (preferencesLoaded) setNotifyEmail(preferences.import_emails);
+  }, [preferencesLoaded, preferences.import_emails]);
   const [jobError, setJobError] = useState<string | null>(null);
 
   const activeJobId = job && !isTerminal(job) ? job.id : null;

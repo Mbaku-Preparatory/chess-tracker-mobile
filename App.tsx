@@ -20,6 +20,7 @@ import { identifyUser } from "@/lib/monitoring";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
 import { ActiveImportsIndicator } from "@/components/import/ActiveImportsIndicator";
 import { EngineHost } from "@/lib/engine/EngineHost";
+import { PreferencesProvider } from "@/components/PreferencesProvider";
 
 function AppShell() {
   const t = useTheme();
@@ -62,9 +63,11 @@ function AppShell() {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={t.mode === "dark" ? "light" : "dark"} />
-      <NavigationContainer ref={navigationRef} theme={navTheme}>
-        <RootNavigator />
-      </NavigationContainer>
+      <PreferencesProvider>
+        <NavigationContainer ref={navigationRef} theme={navTheme}>
+          <RootNavigator />
+        </NavigationContainer>
+      </PreferencesProvider>
       {/*
         Beside the container, like GlobalLoader. It drives navigation through
         navigationRef, so it needs no navigator above it — putting it inside
