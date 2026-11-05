@@ -260,7 +260,7 @@ before both and answered "no" where the answer is now "yes".
 | App info and performance — crash logs, diagnostics | **Collected** — `@sentry/react-native`, see `src/lib/monitoring.ts` |
 | Advertising / tracking | None. No ad SDK, no ad ID, `tracesSampleRate: 0` |
 | Data encrypted in transit? | Yes (HTTPS) |
-| Users can request deletion? | Yes — in-app, Account → Danger zone, plus by email per the policy |
+| Users can request deletion? | Yes — in-app, Account → Danger zone, deletes at once (password, or email for accounts without one); also by email per the policy |
 
 **Financial info must stay "not collected"** — that is true *only* because tips
 are gated out of the native build. If that gate ever comes off, this answer and

@@ -349,6 +349,15 @@ export interface UserProfile {
   first_name: string;
   last_name: string;
   date_joined: string;
+  /** False for a Google, Lichess or Chess.com sign-up that has not set one. */
+  has_password?: boolean;
+  linked?: Linked;
+}
+
+/** Other sites' accounts that sign in to this one. */
+export interface Linked {
+  lichess: { username: string } | null;
+  chesscom?: { username: string } | null;
 }
 
 // ── Background import jobs ───────────────────────────────────────────────────
