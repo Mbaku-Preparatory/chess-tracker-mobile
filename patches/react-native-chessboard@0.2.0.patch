@@ -40,20 +40,21 @@ index 5032bfe81a485ff85d710e7d6e4c0a2e8d78347e..df41a024bb0ac3055feee05ed9825953
  );
  
 diff --git a/src/hooks/use-board-gesture.ts b/src/hooks/use-board-gesture.ts
-index 92df972f7ec3c671308e8cc0e6cd275469a7144d..4643e79e00eab76ac23a2dc6336f381918975440 100644
+index 92df972f7ec3c671308e8cc0e6cd275469a7144d..7986fd2b6a352c19260867156ff3fd1c8b73a24f 100644
 --- a/src/hooks/use-board-gesture.ts
 +++ b/src/hooks/use-board-gesture.ts
-@@ -7,6 +7,9 @@ import type { BoardState, BoardConfig } from '../state/types';
+@@ -7,6 +7,10 @@ import type { BoardState, BoardConfig } from '../state/types';
  import { positionToSquare, squareToPosition } from '../state/use-board-state';
  import type { MoveExecutor } from '../state/move-executor';
  
-+// [chess-preparatory patch] The colour of the drag-hover square.
-+const HOVER_COLOR = 'rgba(246, 195, 68, 0.55)';
++// [chess-preparatory patch] The colour of the drag-hover square: red, so it
++// stands out from the yellow of the last move (as on the website's board).
++const HOVER_COLOR = 'rgba(220, 38, 38, 0.55)';
 +
  interface UseBoardGestureProps {
    boardState: BoardState;
    config: BoardConfig;
-@@ -31,6 +34,9 @@ export const useBoardGesture = ({
+@@ -31,6 +35,9 @@ export const useBoardGesture = ({
    // Offset between touch point and piece position (to follow finger exactly)
    const touchOffsetX = useSharedValue(0);
    const touchOffsetY = useSharedValue(0);
@@ -63,7 +64,7 @@ index 92df972f7ec3c671308e8cc0e6cd275469a7144d..4643e79e00eab76ac23a2dc6336f3819
  
    // Stable callback for tryMove
    const handleTryMove = useCallback(
-@@ -57,6 +63,15 @@ export const useBoardGesture = ({
+@@ -57,6 +64,15 @@ export const useBoardGesture = ({
    );
  
    const gesture = useMemo(() => {
@@ -79,7 +80,7 @@ index 92df972f7ec3c671308e8cc0e6cd275469a7144d..4643e79e00eab76ac23a2dc6336f3819
      const panGesture = Gesture.Pan()
        .enabled(gestureEnabled)
        .minDistance(5) // Require some movement before starting drag
-@@ -115,9 +130,16 @@ export const useBoardGesture = ({
+@@ -115,9 +131,16 @@ export const useBoardGesture = ({
          squareState.translateY.set(
            event.y - touchOffsetY.get() - pieceSize / 2
          );
@@ -96,7 +97,7 @@ index 92df972f7ec3c671308e8cc0e6cd275469a7144d..4643e79e00eab76ac23a2dc6336f3819
          const square = draggedSquare.get();
          if (!square) return;
  
-@@ -199,6 +221,7 @@ export const useBoardGesture = ({
+@@ -199,6 +222,7 @@ export const useBoardGesture = ({
        })
        .onFinalize(() => {
          'worklet';
