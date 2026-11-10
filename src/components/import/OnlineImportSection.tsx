@@ -10,12 +10,13 @@ import { ImportJobProgress } from "./ImportJobProgress";
 import { useImportJob } from "./useImportJob";
 import type { PlayerAccount } from "@/types";
 
-// 1,000 is the server's ceiling for both (MAX_IMPORT_LIMIT in the backend's
-// chesscom.py and lichess.py), so "fetch more" runs out here. Same steps as the
-// web form. Re-importing is safe: ingest_pgn upserts, so a wider fetch re-reads
-// games we already have rather than duplicating them.
-const LIMITS = [25, 50, 100, 200, 500, 1000];
-const MAX_LIMIT = LIMITS[LIMITS.length - 1];
+// "All" is the server's ceiling for both (ONLINE_MAX_GAMES in the backend's
+// import_entries.py; it fetches in pages of 1,000), so "fetch more" runs out
+// here. Same steps as the web form. Re-importing is safe: ingest_pgn upserts,
+// so a wider fetch re-reads games we already have rather than duplicating them.
+const ALL_GAMES = 10000;
+const LIMITS = [25, 50, 100, 200, 500, 1000, ALL_GAMES];
+const label = (n: number) => (n === ALL_GAMES ? "All" : String(n));
 
 type Platform = "chesscom" | "lichess";
 
@@ -138,7 +139,7 @@ export function OnlineImportSection({
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {LIMITS.map((l) => (
             <Pressable key={l} onPress={() => setLimit(l)} style={[st.limitChip, limit === l ? { backgroundColor: COLOR, borderColor: COLOR } : { borderColor: t.border }]}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: limit === l ? "#fff" : t.textMuted }}>{l}</Text>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: limit === l ? "#fff" : t.textMuted }}>{label(l)}</Text>
             </Pressable>
           ))}
         </View>
@@ -168,11 +169,11 @@ export function OnlineImportSection({
           nextLimit ? (
             <Pressable onPress={handleFetchMore} style={[st.fetchMoreBtn, { borderColor: COLOR }]}>
               <Ionicons name="reload-outline" size={14} color={COLOR} />
-              <Text style={{ fontSize: 12, fontWeight: "700", color: COLOR }}>Fetch more — go back {nextLimit} games</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: COLOR }}>{nextLimit === ALL_GAMES ? "Fetch all their games" : `Fetch more — go back ${nextLimit} games`}</Text>
             </Pressable>
           ) : (
             <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 10 }}>
-              {MAX_LIMIT} games is as far back as {site.name} imports go.
+              That is all their games, up to the newest {ALL_GAMES}.
             </Text>
           )
         )}
