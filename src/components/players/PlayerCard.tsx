@@ -13,44 +13,16 @@ import type { RootStackParamList } from "@/navigation/types";
 import type { Player } from "@/types";
 import { userMessage } from "@/lib/apiError";
 
+import { GameSourceCounts } from "./GameSourceCounts";
+
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
+/** Games by source, or the bare total when the counts aren't loaded. */
 function GameSourcePills({ player }: { player: Player }) {
   const t = useTheme();
-  const sc = player.game_source_counts;
-  const otb = sc?.chess_results ?? 0;
-  const cc = sc?.chess_com ?? 0;
-  const li = sc?.lichess ?? 0;
-  const total = (sc ? Object.values(sc).reduce((a, b) => a + (b ?? 0), 0) : player.games_count) ?? 0;
-
-  if (!total) return null;
-
-  if (!otb && !cc && !li) {
-    return <Text style={{ fontSize: 12, color: t.textMuted }}>{total} games</Text>;
-  }
-
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-      {otb > 0 && (
-        <View style={st.pill}>
-          <View style={[st.dot, { backgroundColor: "#f59e0b" }]} />
-          <Text style={{ fontSize: 12, color: t.textMuted }}>{otb} OTB</Text>
-        </View>
-      )}
-      {cc > 0 && (
-        <View style={st.pill}>
-          <View style={[st.dot, { backgroundColor: "#7fa650" }]} />
-          <Text style={{ fontSize: 12, color: t.textMuted }}>{cc} Chess.com</Text>
-        </View>
-      )}
-      {li > 0 && (
-        <View style={st.pill}>
-          <View style={[st.dot, { backgroundColor: "#b05000" }]} />
-          <Text style={{ fontSize: 12, color: t.textMuted }}>{li} Lichess</Text>
-        </View>
-      )}
-    </View>
-  );
+  if (player.game_source_counts) return <GameSourceCounts counts={player.game_source_counts} />;
+  if (!player.games_count) return null;
+  return <Text style={{ fontSize: 12, color: t.textMuted }}>{player.games_count.toLocaleString("en")} games</Text>;
 }
 
 export function PlayerCard({
@@ -141,7 +113,5 @@ const st = StyleSheet.create({
   avatar: { height: 48, width: 48, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   name: { fontSize: 16, fontWeight: "700", flexShrink: 1 },
   titleBadge: { backgroundColor: "#fef3c7", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
-  pill: { flexDirection: "row", alignItems: "center", gap: 5 },
-  dot: { height: 7, width: 7, borderRadius: 4 },
   deleteBtn: { height: 34, width: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth },
 });
