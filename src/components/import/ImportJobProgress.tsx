@@ -35,6 +35,7 @@ export function ImportJobProgress({
             {waiting
               ? `Waiting behind ${job.queue_ahead} other import${job.queue_ahead !== 1 ? "s" : ""}…`
               : runningLabel}
+            {job.games_imported > 0 ? ` ${job.games_imported} games imported so far.` : ""}
           </Text>
           <Pressable onPress={onCancel} disabled={job.cancel_requested}>
             <Text style={{ fontSize: 12, color: t.textMuted, opacity: job.cancel_requested ? 0.5 : 1 }}>
@@ -46,6 +47,7 @@ export function ImportJobProgress({
             backgrounded or the screen is left. */}
         <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 6 }}>
           This runs on the server — you can leave this screen and come back.
+          {job.notify_email ? " We'll email you when it's done." : ""}
         </Text>
       </View>
     );

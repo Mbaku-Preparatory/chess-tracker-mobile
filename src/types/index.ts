@@ -455,3 +455,19 @@ export interface BotBookGame {
   result: GameResult;
   event: string;
 }
+
+/**
+ * What a Chess.com or Lichess import can ask for (the backend's
+ * OnlineImportSerializer). The newest `limit` games, optionally only from the
+ * last `since_days` days and only in some time controls.
+ */
+export interface OnlineImportRequest {
+  username?: string;
+  limit?: number;
+  since_days?: number | null;
+  time_classes?: TimeClass[];
+  notify_email?: boolean;
+}
+
+/** Chess.com's names, which the backend uses for both sites (import_entries.TIME_CLASSES). */
+export type TimeClass = "bullet" | "blitz" | "rapid" | "classical" | "daily";

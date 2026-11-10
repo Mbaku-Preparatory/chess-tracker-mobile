@@ -26,6 +26,7 @@ import type {
   Linked,
   Preferences,
   UserProfile,
+  OnlineImportRequest,
 } from "@/types";
 import type { Provider, ProviderCode } from "@/lib/socialAuth";
 import { buildApiError, buildNetworkError } from "@/lib/apiError";
@@ -217,7 +218,7 @@ export const api = {
    */
   importFromChessCom(
     slug: string,
-    payload: { username?: string; limit?: number; notify_email?: boolean },
+    payload: OnlineImportRequest,
     signal?: AbortSignal,
   ): Promise<ImportJob> {
     return fetchJson(`${API_BASE}/players/${slug}/import-chesscom/`, {
@@ -231,7 +232,7 @@ export const api = {
   /** Queue a Lichess import. Returns the job to poll — see importFromChessCom. */
   importFromLichess(
     slug: string,
-    payload: { username?: string; limit?: number; notify_email?: boolean },
+    payload: OnlineImportRequest,
     signal?: AbortSignal,
   ): Promise<ImportJob> {
     return fetchJson(`${API_BASE}/players/${slug}/import-lichess/`, {

@@ -3,13 +3,14 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 
 import { RetroProgress } from "@/components/books/RetroProgress";
 import { Screen } from "@/components/layout/Screen";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
+import { NotifyMeSwitch } from "@/components/ui/NotifyMeSwitch";
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
 import { deleteBook, isConverting, myBooks, type Book } from "@/lib/books";
@@ -153,17 +154,11 @@ export function BooksScreen() {
           {uploading && <Button title="Cancel" variant="secondary" onPress={() => uploadRef.current?.abort()} />}
         </View>
         <Text style={{ fontSize: 12, color: t.textFaint }}>Up to 50 MB.</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Switch
-            value={notifyEmail}
-            onValueChange={setNotifyEmail}
-            trackColor={{ true: t.brand(600), false: t.border }}
-            accessibilityLabel="Email me when it's ready"
-          />
-          <Text style={{ flex: 1, fontSize: 13, color: t.textMuted }}>
-            Email me when it's ready. A scanned book takes a few minutes to read.
-          </Text>
-        </View>
+        <NotifyMeSwitch
+          value={notifyEmail}
+          onValueChange={setNotifyEmail}
+          label="Email me when it's ready. A scanned book takes a few minutes to read."
+        />
         {error && <Text style={{ fontSize: 13, color: t.danger }}>{error}</Text>}
         {already && (
           <View style={{ gap: 6 }}>
