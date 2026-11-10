@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { usePreferences } from "@/components/PreferencesProvider";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -12,17 +11,15 @@ import { requestNotificationPermissions } from "@/lib/notifications";
 import { useTheme } from "@/theme/ThemeContext";
 import { Button } from "@/components/ui/Button";
 import { ImportProgressBar } from "@/components/import/ImportProgressBar";
+import { useNotifyMe } from "@/components/ui/NotifyMeSwitch";
+import { ImportElsewhereNote } from "./ImportElsewhereNote";
+import { isTerminal, useImportJob } from "./useImportJob";
 import type { RootStackParamList } from "@/navigation/types";
 import type { ImportJob } from "@/types";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const CR_COLOR = "#1a3a6b";
-const POLL_INTERVAL_MS = 2000;
-
-function isTerminal(job: ImportJob): boolean {
-  return job.status === "succeeded" || job.status === "failed" || job.status === "cancelled";
-}
 
 type Candidate = { fideId: string; fullName: string; federation: string; standardRating: number | null };
 
@@ -64,85 +61,25 @@ export function ChessResultsImportSection({
   // The profile already knows who this is — don't offer to import someone else.
   const knownFideId = fideId?.trim() || "";
 
-  const [job, setJob] = useState<ImportJob | null>(null);
-  const [starting, setStarting] = useState(false);
   const [fideInput, setFideInput] = useState("");
   const [nameInput, setNameInput] = useState("");
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Starts as Account's switch says; the box still changes it for this one.
-  const { preferences, loaded: preferencesLoaded } = usePreferences();
-  const [notifyEmail, setNotifyEmail] = useState(preferences.import_emails);
-  useEffect(() => {
-    if (preferencesLoaded) setNotifyEmail(preferences.import_emails);
-  }, [preferencesLoaded, preferences.import_emails]);
-  const [jobError, setJobError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // the name search's
+  const [notifyEmail, setNotifyEmail] = useNotifyMe();
 
-  const activeJobId = job && !isTerminal(job) ? job.id : null;
+  // Reconnecting after the app was backgrounded (the OS can suspend it any
+  // time, and component state doesn't survive that; the job row does),
+  // polling, starting and cancelling: the same hook as the online panels.
+  const { job, starting, error: jobError, start, cancel, reset, elsewhere } = useImportJob({
+    slug,
+    source: "chess_results",
+  });
 
-  // ── Reconnect to an import already in progress ──────────────────────────────
-  //
-  // This matters more on mobile than on the web: the OS can suspend the app at
-  // any time, and a coach on patchy data will background it. Component state
-  // does not survive that. The job row does.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { results } = await api.recentImportJobs(slug);
-        const live = results.find((j) => !isTerminal(j));
-        if (live && !cancelled) setJob((cur) => cur ?? live);
-      } catch {
-        // Can't check — they can still start a new import.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [slug]);
-
-  // ── Poll a running job ──────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!activeJobId) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout>;
-
-    const tick = async () => {
-      try {
-        const next = await api.getImportJob(activeJobId);
-        if (cancelled) return;
-        setJob(next);
-        if (isTerminal(next)) return;
-      } catch {
-        // A failed poll is usually a blip in signal. The job is unaffected by
-        // our connection, so keep trying rather than declaring it dead.
-      }
-      timer = setTimeout(tick, POLL_INTERVAL_MS);
-    };
-
-    timer = setTimeout(tick, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [activeJobId]);
-
-  // ── Actions ─────────────────────────────────────────────────────────────────
-
-  async function startImport(id: string) {
+  function startImport(id: string) {
     if (!id) return;
     setError(null);
-    setJobError(null);
-    setStarting(true);
-    try {
-      setJob(await api.createCareerImportJob(slug, id, notifyEmail));
-    } catch (err) {
-      setError(userMessage(err, "Could not start the import."));
-    } finally {
-      setStarting(false);
-    }
+    start(() => api.createCareerImportJob(slug, id, notifyEmail), "Could not start the import.");
   }
 
   async function findByName() {
@@ -157,14 +94,6 @@ export function ChessResultsImportSection({
       setError(userMessage(err, "Search failed. Try again."));
     } finally {
       setSearching(false);
-    }
-  }
-
-  async function cancelJob(jobId: string) {
-    try {
-      setJob(await api.cancelImportJob(jobId));
-    } catch (err) {
-      setJobError(userMessage(err, "Could not cancel the import."));
     }
   }
 
@@ -219,11 +148,8 @@ export function ChessResultsImportSection({
         <JobProgress
           job={job}
           error={jobError}
-          onCancel={() => cancelJob(job.id)}
-          onReset={() => {
-            setJob(null);
-            setJobError(null);
-          }}
+          onCancel={cancel}
+          onReset={reset}
           onViewProfile={() => navigation.navigate("PlayerDetail", { slug: playerRef })}
         />
       ) : (
@@ -296,7 +222,9 @@ export function ChessResultsImportSection({
 
           {notifyRow}
 
-          {error && <Text style={{ color: t.danger, fontSize: 12 }}>{error}</Text>}
+          {elsewhere && <ImportElsewhereNote job={elsewhere} />}
+
+          {(error || jobError) && <Text style={{ color: t.danger, fontSize: 12 }}>{error || jobError}</Text>}
 
           <Pressable
             onPress={() => startImport(chosenId)}
@@ -306,7 +234,7 @@ export function ChessResultsImportSection({
             {starting ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Import all games</Text>
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>{elsewhere ? "Add to queue" : "Import all games"}</Text>
             )}
           </Pressable>
         </View>
