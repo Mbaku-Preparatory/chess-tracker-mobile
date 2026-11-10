@@ -10,11 +10,11 @@ import { ImportJobProgress } from "./ImportJobProgress";
 import { useImportJob } from "./useImportJob";
 import type { PlayerAccount } from "@/types";
 
-// 300 is the server's ceiling for both (ChessComImportSerializer.limit and
-// LichessImportSerializer.limit), so "fetch more" runs out here. Re-importing
-// is safe: ingest_pgn upserts, so a wider fetch re-reads games we already have
-// rather than duplicating them.
-const LIMITS = [25, 50, 100, 200, 300];
+// 1,000 is the server's ceiling for both (MAX_IMPORT_LIMIT in the backend's
+// chesscom.py and lichess.py), so "fetch more" runs out here. Same steps as the
+// web form. Re-importing is safe: ingest_pgn upserts, so a wider fetch re-reads
+// games we already have rather than duplicating them.
+const LIMITS = [25, 50, 100, 200, 500, 1000];
 const MAX_LIMIT = LIMITS[LIMITS.length - 1];
 
 type Platform = "chesscom" | "lichess";
