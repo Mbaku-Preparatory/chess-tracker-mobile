@@ -47,6 +47,7 @@ export function ImportJobProgress({
             backgrounded or the screen is left. */}
         <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 6 }}>
           This runs on the server — you can leave this screen and come back.
+          {job.notify_email ? " We'll email you when it's done." : ""}
         </Text>
       </View>
     );

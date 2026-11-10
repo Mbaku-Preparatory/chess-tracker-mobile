@@ -5,18 +5,41 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
 import { GAME_SOURCES, tint } from "@/lib/games";
 import { useTheme } from "@/theme/ThemeContext";
+import { NotifyMeSwitch, useNotifyMe } from "@/components/ui/NotifyMeSwitch";
 import { ConnectedAccountManager } from "./ConnectedAccountManager";
 import { ImportJobProgress } from "./ImportJobProgress";
 import { useImportJob } from "./useImportJob";
-import type { PlayerAccount } from "@/types";
+import type { OnlineImportRequest, PlayerAccount, TimeClass } from "@/types";
 
-// "All" is the server's ceiling for both (ONLINE_MAX_GAMES in the backend's
-// import_entries.py; it fetches in pages of 1,000), so "fetch more" runs out
-// here. Same steps as the web form. Re-importing is safe: ingest_pgn upserts,
-// so a wider fetch re-reads games we already have rather than duplicating them.
+// The most one import can fetch: the server's ceiling (ONLINE_MAX_GAMES in the
+// backend's import_entries.py). It fetches in pages of 1,000. Same options as
+// the web form.
 const ALL_GAMES = 10000;
-const LIMITS = [25, 50, 100, 200, 500, 1000, ALL_GAMES];
-const label = (n: number) => (n === ALL_GAMES ? "All" : String(n));
+
+/** "Games to fetch": a number of the newest games, or every game in a period. */
+const FETCH_OPTIONS: { label: string; limit: number; sinceDays?: number }[] = [
+  ...[25, 50, 100, 200, 500, 1000].map((n) => ({ label: String(n), limit: n })),
+  { label: "Last 3 months", limit: ALL_GAMES, sinceDays: 90 },
+  { label: "Last 12 months", limit: ALL_GAMES, sinceDays: 365 },
+  { label: "All", limit: ALL_GAMES },
+];
+type FetchOption = (typeof FETCH_OPTIONS)[number];
+
+const TIME_CLASSES: { id: TimeClass; label: string }[] = [
+  { id: "bullet", label: "Bullet" },
+  { id: "blitz", label: "Blitz" },
+  { id: "rapid", label: "Rapid" },
+  { id: "classical", label: "Classical" },
+  { id: "daily", label: "Daily" },
+];
+
+/**
+ * "Fetch more" after an import: the next bigger count, up to All. Not after a
+ * period, which already took every game in it. Re-importing is safe:
+ * ingest_pgn upserts, so a wider fetch re-reads games we already have.
+ */
+const fetchMoreAfter = (o: FetchOption) =>
+  o.sinceDays ? undefined : FETCH_OPTIONS.find((n) => !n.sinceDays && n.limit > o.limit);
 
 type Platform = "chesscom" | "lichess";
 
@@ -29,7 +52,7 @@ const SITES: Record<
     icon: React.ComponentProps<typeof Ionicons>["name"];
     placeholder: string;
     runningLabel: string;
-    start: (slug: string, body: { username: string; limit: number }) => ReturnType<typeof api.importFromChessCom>;
+    start: (slug: string, body: OnlineImportRequest) => ReturnType<typeof api.importFromChessCom>;
   }
 > = {
   chesscom: {
@@ -67,7 +90,21 @@ export function OnlineImportSection({
   const COLOR = site.color;
   const siteAccounts = accounts.filter((a) => a.platform === platform);
   const [username, setUsername] = useState(siteAccounts[0]?.username || "");
-  const [limit, setLimit] = useState(50);
+  const [choice, setChoice] = useState<FetchOption>(FETCH_OPTIONS[1]); // 50
+  const [timeClasses, setTimeClasses] = useState<TimeClass[]>(TIME_CLASSES.map((c) => c.id));
+  const [notifyEmail, setNotifyEmail] = useNotifyMe();
+
+  function choose(option: FetchOption) {
+    setChoice(option);
+    // "All" and the periods can take minutes: offer the email (they can switch it off).
+    if (option.limit === ALL_GAMES) setNotifyEmail(true);
+  }
+
+  function toggleTimeClass(id: TimeClass) {
+    const on = timeClasses.includes(id);
+    if (on && timeClasses.length === 1) return; // keep at least one
+    setTimeClasses(TIME_CLASSES.map((c) => c.id).filter((c) => (c === id ? !on : timeClasses.includes(c))));
+  }
   // The import runs in the worker service now, so this holds a job id and
   // polls. `matches` keeps this panel showing this site's work only — a player
   // can have a chess-results import running at the same time.
@@ -79,22 +116,29 @@ export function OnlineImportSection({
 
   const canSubmit = username.trim().length > 0 && !starting && !isRunning;
 
-  // Takes the count as an argument rather than reading `limit`: "fetch more"
-  // raises it and re-runs in one go, and the state setter has not landed yet.
-  async function handleImport(fetchLimit: number) {
+  // Takes the option and the email choice as arguments rather than reading
+  // state: "fetch more" changes both and re-runs in one go, and the state
+  // setters have not landed yet.
+  async function handleImport(option: FetchOption, notify: boolean) {
     if (!canSubmit) return;
     await start(
-      () => site.start(slug, { username: username.trim(), limit: fetchLimit }),
+      () => site.start(slug, {
+        username: username.trim(),
+        limit: option.limit,
+        since_days: option.sinceDays ?? null,
+        time_classes: timeClasses,
+        notify_email: notify,
+      }),
       "Import failed. Check the username and try again.",
     );
   }
 
-  const nextLimit = LIMITS.find((l) => l > limit);
+  const next = fetchMoreAfter(choice);
 
   function handleFetchMore() {
-    if (!nextLimit) return;
-    setLimit(nextLimit);
-    handleImport(nextLimit);
+    if (!next) return;
+    choose(next);
+    handleImport(next, notifyEmail || next.limit === ALL_GAMES);
   }
 
   return (
@@ -113,13 +157,7 @@ export function OnlineImportSection({
         {siteAccounts.length > 1 && (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
             {siteAccounts.map((a) => (
-              <Pressable
-                key={a.id}
-                onPress={() => { setUsername(a.username); reset(); }}
-                style={[st.accountChip, username === a.username ? { backgroundColor: COLOR, borderColor: COLOR } : { borderColor: t.border }]}
-              >
-                <Text style={{ fontSize: 11, fontWeight: "600", color: username === a.username ? "#fff" : t.textMuted }}>{a.username}</Text>
-              </Pressable>
+              <Chip key={a.id} label={a.username} on={username === a.username} color={COLOR} onPress={() => { setUsername(a.username); reset(); }} />
             ))}
           </View>
         )}
@@ -136,16 +174,36 @@ export function OnlineImportSection({
         />
 
         <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted, marginTop: 12, marginBottom: 6 }}>Games to fetch</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-          {LIMITS.map((l) => (
-            <Pressable key={l} onPress={() => setLimit(l)} style={[st.limitChip, limit === l ? { backgroundColor: COLOR, borderColor: COLOR } : { borderColor: t.border }]}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: limit === l ? "#fff" : t.textMuted }}>{label(l)}</Text>
-            </Pressable>
+        <View style={st.chipRow}>
+          {FETCH_OPTIONS.map((o) => (
+            <Chip key={o.label} label={o.label} on={choice.label === o.label} color={COLOR} onPress={() => choose(o)} />
           ))}
         </View>
 
+        <Text style={{ fontSize: 12, fontWeight: "600", color: t.textMuted, marginTop: 12, marginBottom: 6 }}>Time controls</Text>
+        <View style={st.chipRow}>
+          {TIME_CLASSES.map((c) => (
+            <Chip key={c.id} label={c.label} on={timeClasses.includes(c.id)} color={COLOR} onPress={() => toggleTimeClass(c.id)} />
+          ))}
+        </View>
+
+        {choice.limit > 200 && (
+          <Text style={{ fontSize: 12, color: t.textFaint, marginTop: 10 }}>
+            {choice.sinceDays
+              ? `Every game from the ${choice.label.toLowerCase()}, up to ${ALL_GAMES}. This can take a few minutes.`
+              : choice.limit === ALL_GAMES
+                ? `Up to their newest ${ALL_GAMES} games. This can take ten minutes or so.`
+                : `${choice.label} games take a minute or two.`}{" "}
+            You can leave this screen; the import keeps going.
+          </Text>
+        )}
+
+        <View style={{ marginTop: 12 }}>
+          <NotifyMeSwitch value={notifyEmail} onValueChange={setNotifyEmail} label="Email me when this is done" />
+        </View>
+
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 }}>
-          <Pressable onPress={() => handleImport(limit)} disabled={!canSubmit} style={[st.submitBtn, { backgroundColor: COLOR, opacity: !canSubmit ? 0.5 : 1 }]}>
+          <Pressable onPress={() => handleImport(choice, notifyEmail)} disabled={!canSubmit} style={[st.submitBtn, { backgroundColor: COLOR, opacity: !canSubmit ? 0.5 : 1 }]}>
             <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
               {starting ? "Queueing…" : isRunning ? "Import running…" : `Import from ${site.name}`}
             </Text>
@@ -165,17 +223,13 @@ export function OnlineImportSection({
           runningLabel={site.runningLabel}
         />
 
-        {job?.status === "succeeded" && (
-          nextLimit ? (
-            <Pressable onPress={handleFetchMore} style={[st.fetchMoreBtn, { borderColor: COLOR }]}>
-              <Ionicons name="reload-outline" size={14} color={COLOR} />
-              <Text style={{ fontSize: 12, fontWeight: "700", color: COLOR }}>{nextLimit === ALL_GAMES ? "Fetch all their games" : `Fetch more — go back ${nextLimit} games`}</Text>
-            </Pressable>
-          ) : (
-            <Text style={{ fontSize: 11, color: t.textFaint, marginTop: 10 }}>
-              That is all their games, up to the newest {ALL_GAMES}.
+        {job?.status === "succeeded" && next && (
+          <Pressable onPress={handleFetchMore} style={[st.fetchMoreBtn, { borderColor: COLOR }]}>
+            <Ionicons name="reload-outline" size={14} color={COLOR} />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: COLOR }}>
+              {next.limit === ALL_GAMES ? "Fetch all their games" : `Fetch more — go back ${next.label} games`}
             </Text>
-          )
+          </Pressable>
         )}
       </View>
       <ConnectedAccountManager slug={slug} platform={platform} accounts={accounts} onUpdated={onUpdated} />
@@ -183,12 +237,26 @@ export function OnlineImportSection({
   );
 }
 
+/** An on/off chip in the site's colour: saved accounts, games to fetch, time controls. */
+function Chip({ label, on, color, onPress }: { label: string; on: boolean; color: string; onPress: () => void }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityState={{ selected: on }}
+      style={[st.chip, on ? { backgroundColor: color, borderColor: color } : { borderColor: t.border }]}
+    >
+      <Text style={{ fontSize: 12, fontWeight: "600", color: on ? "#fff" : t.textMuted }}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const st = StyleSheet.create({
   card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: 16 },
   iconBox: { height: 36, width: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  accountChip: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 14 },
-  limitChip: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  chip: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   fetchMoreBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, paddingVertical: 10 },
   submitBtn: { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12 },
   errorBox: { marginTop: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: 10 },
