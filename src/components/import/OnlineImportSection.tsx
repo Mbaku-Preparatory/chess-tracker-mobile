@@ -7,6 +7,7 @@ import { GAME_SOURCES, tint } from "@/lib/games";
 import { useTheme } from "@/theme/ThemeContext";
 import { NotifyMeSwitch, useNotifyMe } from "@/components/ui/NotifyMeSwitch";
 import { ConnectedAccountManager } from "./ConnectedAccountManager";
+import { ImportElsewhereNote } from "./ImportElsewhereNote";
 import { ImportJobProgress } from "./ImportJobProgress";
 import { useImportJob } from "./useImportJob";
 import type { OnlineImportRequest, PlayerAccount, TimeClass } from "@/types";
@@ -105,12 +106,12 @@ export function OnlineImportSection({
     if (on && timeClasses.length === 1) return; // keep at least one
     setTimeClasses(TIME_CLASSES.map((c) => c.id).filter((c) => (c === id ? !on : timeClasses.includes(c))));
   }
-  // The import runs in the worker service now, so this holds a job id and
-  // polls. `matches` keeps this panel showing this site's work only — a player
-  // can have a chess-results import running at the same time.
-  const { job, starting, error: errorMsg, start, cancel, reset, isRunning } = useImportJob({
+  // The import runs in the worker service, so this holds a job id and polls.
+  // `source` keeps this panel showing this site's work only; `elsewhere` is
+  // another import for this player.
+  const { job, starting, error: errorMsg, start, cancel, reset, isRunning, elsewhere } = useImportJob({
     slug,
-    matches: (j) => j.results?.[0]?.name?.startsWith(site.name) ?? false,
+    source: platform,
     onSettled: async () => { await onUpdated?.(); },
   });
 
@@ -202,10 +203,16 @@ export function OnlineImportSection({
           <NotifyMeSwitch value={notifyEmail} onValueChange={setNotifyEmail} label="Email me when this is done" />
         </View>
 
+        {elsewhere && !isRunning && (
+          <View style={{ marginTop: 12 }}>
+            <ImportElsewhereNote job={elsewhere} />
+          </View>
+        )}
+
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 }}>
           <Pressable onPress={() => handleImport(choice, notifyEmail)} disabled={!canSubmit} style={[st.submitBtn, { backgroundColor: COLOR, opacity: !canSubmit ? 0.5 : 1 }]}>
             <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
-              {starting ? "Queueing…" : isRunning ? "Import running…" : `Import from ${site.name}`}
+              {starting ? "Queueing…" : isRunning ? "Import running…" : elsewhere ? "Add to queue" : `Import from ${site.name}`}
             </Text>
           </Pressable>
         </View>
