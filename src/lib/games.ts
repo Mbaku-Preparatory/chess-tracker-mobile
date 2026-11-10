@@ -18,7 +18,7 @@ export interface GameSourceStyle {
 }
 
 export const GAME_SOURCES: Record<GameSource, GameSourceStyle> = {
-  chess_results: { label: "OTB", short: "OTB", color: "#1a3a6b", text: "#1a3a6b" },
+  chess_results: { label: "OTB", short: "OTB", color: "#f59e0b", text: "#92400e" },
   chess_com: { label: "Chess.com", short: "Chess.com", color: "#7fa650", text: "#4a6e2e" },
   lichess: { label: "Lichess", short: "Lichess", color: "#b05000", text: "#7a3800" },
   pgn_import: { label: "PGN import", short: "PGN", color: "#7c3aed", text: "#6d28d9" },

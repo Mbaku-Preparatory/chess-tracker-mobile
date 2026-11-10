@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { PerformanceSplitCard } from "@/components/players/PerformanceSplitCard";
 import { OpeningBreakdownCard } from "@/components/players/OpeningBreakdownCard";
 import { GamesTable } from "@/components/players/GamesTable";
+import { GameSourceCounts } from "@/components/players/GameSourceCounts";
 import type { RootStackParamList } from "@/navigation/types";
 import { userMessage } from "@/lib/apiError";
 
@@ -125,7 +126,6 @@ export function PlayerDetailScreen({ route, navigation }: Props) {
   const whiteOpenings = player.opening_stats.filter((o) => o.color_choice === "white").slice(0, 5);
   const blackOpenings = player.opening_stats.filter((o) => o.color_choice === "black").slice(0, 5);
   const initials = player.full_name.split(" ").map((n) => n[0]).join("");
-  const sc = player.game_source_counts;
 
   return (
     <Screen>
@@ -148,13 +148,7 @@ export function PlayerDetailScreen({ route, navigation }: Props) {
               {player.fide_id && <Text style={{ fontSize: 12, color: t.textMuted }}>FIDE #{player.fide_id}</Text>}
               {player.birth_year && <Text style={{ fontSize: 12, color: t.textMuted }}>Born {player.birth_year}</Text>}
             </View>
-            {sc && (sc.chess_results || sc.chess_com || sc.lichess) ? (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 6 }}>
-                {!!sc.chess_results && <Text style={{ fontSize: 11, color: t.textFaint }}>● {sc.chess_results} OTB</Text>}
-                {!!sc.chess_com && <Text style={{ fontSize: 11, color: t.textFaint }}>● {sc.chess_com} Chess.com</Text>}
-                {!!sc.lichess && <Text style={{ fontSize: 11, color: t.textFaint }}>● {sc.lichess} Lichess</Text>}
-              </View>
-            ) : null}
+            <GameSourceCounts counts={player.game_source_counts} style={{ marginTop: 6 }} textStyle={{ fontSize: 11, color: t.textFaint }} />
             <View style={{ marginTop: 10 }}>
               <FideSection slug={slug} fideId={player.fide_id} />
             </View>
