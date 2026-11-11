@@ -13,7 +13,7 @@ import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { NotifyMeSwitch } from "@/components/ui/NotifyMeSwitch";
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
-import { deleteBook, isConverting, myBooks, type Book } from "@/lib/books";
+import { canOpen, deleteBook, isConverting, myBooks, type Book } from "@/lib/books";
 import type { RootStackParamList } from "@/navigation/types";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -201,6 +201,8 @@ export function BooksScreen() {
                 <Text style={{ fontSize: 13, color: book.status === "failed" ? t.danger : t.textMuted }}>{status(book)}</Text>
               )}
               <View style={st.actions}>
+                {/* A reader book opens after its first pages; the rest light up as they are read. */}
+                {isConverting(book) && canOpen(book) && <Button title="Start reading" size="sm" onPress={() => open(book)} />}
                 {book.status === "succeeded" && (
                   <>
                     <Button title={book.kind === "reader" ? "Read" : "Open"} size="sm" onPress={() => open(book)} />
