@@ -25,6 +25,9 @@ export type Book = {
   progress: number | null;
   pageCount: number;
   pagesDone: number;
+  /** Pages of a reader book that can be read so far: it opens after the
+   * first few while the server reads on. pageCount once done. */
+  indexedPages: number;
   diagramCount: number;
   moveCount: number;
   notifyEmail: boolean;
@@ -55,7 +58,7 @@ export type BookExercise = {
 };
 
 const BOOK_FIELDS =
-  "publicId title status error kind exerciseCount verifiedCount progress pageCount pagesDone diagramCount moveCount notifyEmail pdfPageCount readInPart";
+  "publicId title status error kind exerciseCount verifiedCount progress pageCount pagesDone indexedPages diagramCount moveCount notifyEmail pdfPageCount readInPart";
 
 async function query<T>(text: string, variables: Record<string, unknown> = {}): Promise<T> {
   const response = await graphqlClient({ data: { query: text, variables } });
@@ -65,6 +68,12 @@ async function query<T>(text: string, variables: Record<string, unknown> = {}): 
 }
 
 export const isConverting = (b: Pick<Book, "status">) => b.status === "pending" || b.status === "running";
+
+/** Whether a book can be opened: once it is done, or a reader book as soon as
+ * its first pages are (the website's reader, in BookReaderWeb, lights up the
+ * rest as it is read). The same rule as the website's lib/books.ts canOpen. */
+export const canOpen = (b: Pick<Book, "status" | "kind" | "indexedPages">) =>
+  b.status === "succeeded" || (b.kind === "reader" && isConverting(b) && b.indexedPages > 0);
 
 export async function myBooks(): Promise<Book[]> {
   return (await query<{ myBooks: Book[] }>(`{ myBooks { ${BOOK_FIELDS} } }`)).myBooks;

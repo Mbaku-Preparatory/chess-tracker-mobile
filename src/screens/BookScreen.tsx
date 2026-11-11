@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { CardSkeleton } from "@/components/ui/LoadingSkeleton";
 import { api } from "@/lib/api";
 import { userMessage } from "@/lib/apiError";
-import { getBook, type BookDetail, type BookExerciseSummary } from "@/lib/books";
+import { canOpen, getBook, type BookDetail, type BookExerciseSummary } from "@/lib/books";
 import type { RootStackParamList } from "@/navigation/types";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -42,7 +42,7 @@ export function BookScreen({ route, navigation }: Props) {
     };
   }, [publicId]);
 
-  if (error || book === null || (book && book.status !== "succeeded")) {
+  if (error || book === null || (book && !canOpen(book))) {
     return (
       <Screen>
         <Text style={{ color: error ? t.danger : t.textMuted, textAlign: "center", marginTop: 40 }}>
