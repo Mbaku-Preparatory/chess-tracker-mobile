@@ -13,7 +13,9 @@
     "eas:whoami": "npx eas-cli whoami",
     "build:apk": "npx eas-cli build --platform android --profile preview",
     "build:aab": "npx eas-cli build --platform android --profile production",
-    "build:dev": "npx eas-cli build --platform android --profile development"
+    "build:dev": "npx eas-cli build --platform android --profile development",
+    "publish:ota:preview": "node scripts/publish-ota.js --channel preview",
+    "publish:ota:production": "node scripts/publish-ota.js --channel production"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
@@ -41,6 +43,7 @@
     "expo-secure-store": "~57.0.3",
     "expo-sharing": "~57.0.18",
     "expo-status-bar": "~57.0.1",
+    "expo-updates": "~57.0.27",
     "expo-web-browser": "~57.0.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",

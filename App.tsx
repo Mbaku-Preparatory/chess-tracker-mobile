@@ -16,6 +16,8 @@ import { navigationRef } from "@/navigation/navigationRef";
 import { RootNavigator } from "@/navigation/RootNavigator";
 import { UpdateRequiredScreen } from "@/screens/UpdateRequiredScreen";
 import { checkVersionGate, type VersionGate } from "@/lib/appVersion";
+import { applyUpdateNow, useOtaUpdates } from "@/lib/otaUpdates";
+import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { identifyUser } from "@/lib/monitoring";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
 import { ActiveImportsIndicator } from "@/components/import/ActiveImportsIndicator";
@@ -26,6 +28,7 @@ function AppShell() {
   const t = useTheme();
   const [gate, setGate] = useState<VersionGate | null>(null);
   const email = useAppSelector((s) => s.auth.email);
+  const { updateReady, restart, dismiss } = useOtaUpdates();
 
   // Attaches the signed-in reviewer to crash reports, and detaches on sign-out,
   // so several people's crashes can be told apart. No-ops without a DSN.
@@ -34,11 +37,14 @@ function AppShell() {
   }, [email]);
 
   // Checked once per launch. Failures resolve to null and are ignored, so an offline start or a
-  // backend outage never blocks the app - see checkVersionGate.
+  // backend outage never blocks the app - see checkVersionGate. A store update outranks a JS one:
+  // an over-the-air update can't replace a binary the backend has stopped supporting.
   useEffect(() => {
     let cancelled = false;
     checkVersionGate().then((result) => {
-      if (!cancelled && result?.update_required) setGate(result);
+      if (cancelled || !result) return;
+      if (result.update_required) setGate(result);
+      else if (result.js_update_required) applyUpdateNow();
     });
     return () => {
       cancelled = true;
@@ -76,6 +82,7 @@ function AppShell() {
       */}
       <ActiveImportsIndicator />
       <GlobalLoader />
+      <UpdatePrompt visible={updateReady} onRestart={restart} onDismiss={dismiss} />
     </View>
   );
 }

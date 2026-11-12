@@ -24,7 +24,8 @@
         "EXPO_PUBLIC_SENTRY_DSN": "https://6c9ce892a322cded660e4d0f37b9f59e@o4511895252434944.ingest.us.sentry.io/4511895302307840",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD": "true"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "android": {
@@ -35,7 +36,8 @@
         "EXPO_PUBLIC_SENTRY_DSN": "https://6c9ce892a322cded660e4d0f37b9f59e@o4511895252434944.ingest.us.sentry.io/4511895302307840",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD": "true"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

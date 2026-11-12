@@ -59,6 +59,12 @@
         "projectId": "c3490fef-32cd-432d-a970-a3624c6af2b8"
       }
     },
-    "owner": "cliffordombiro"
+    "owner": "cliffordombiro",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c3490fef-32cd-432d-a970-a3624c6af2b8"
+    }
   }
 }

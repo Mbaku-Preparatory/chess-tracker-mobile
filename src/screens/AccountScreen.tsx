@@ -5,7 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { api } from "@/lib/api";
 import { sendTestNotification } from "@/lib/notifications";
-import { APP_VERSION, BUILD_NUMBER } from "@/lib/appVersion";
+import { versionLabel } from "@/lib/appVersion";
 import { PRIVACY_POLICY_URL } from "@/lib/links";
 import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
@@ -210,10 +210,7 @@ export function AccountScreen({ navigation }: Props) {
       </AccountSection>
 
       <AccountSection label="ABOUT">
-        <ReadOnlyRow
-          label="App version"
-          value={BUILD_NUMBER ? `${APP_VERSION} (build ${BUILD_NUMBER})` : APP_VERSION}
-        />
+        <ReadOnlyRow label="App version" value={versionLabel()} />
         {/* Play's User Data policy wants the policy reachable from inside the
             app, not only from the store listing — and a reviewer looks for it
             here. It covers crash reporting and what Mbaku sends to Anthropic. */}

@@ -196,8 +196,9 @@ in-app "update available" banner is accurate. Do not edit the default in
 the whole point of the gate being env-driven is that changing it never needs a
 backend deploy.
 
-There is **no EAS Update configured**, so every JS change needs a new build and
-a new store release. Batch changes and bump `versionCode` once at the end.
+A JS-only change does not need a store release: publish it over the air (next
+section). A version bump changes the runtime fingerprint, so phones on the old
+build stop receiving over-the-air updates until they install the new one.
 
 ## Forcing an update (emergency)
 
@@ -208,11 +209,54 @@ Set on Railway — no code change, no rebuild:
 | `MOBILE_MIN_VERSION` | Anything below this is hard-blocked with the update screen |
 | `MOBILE_BLOCKED_VERSIONS` | Comma-separated kill switch for specific bad builds, without raising the floor |
 | `MOBILE_UPDATE_MESSAGE` | Optional custom text on the update screen |
+| `MOBILE_MIN_JS_VERSION` | Phones running older JS (e.g. below `1.0.5.2`) download the newest over-the-air update and restart at once. Empty = nobody forced |
 
 The gate fails open at every layer: unset variables leave it inert, an unparseable
 client version is let through, and the app treats any network error as "carry on".
 That is deliberate — a gate that fails closed turns a config typo into an app
 nobody can open.
+
+## Over-the-air updates (expo-updates)
+
+Builds check EAS for new JavaScript at every launch and every return to the
+foreground, download it in the background, then show **"Update ready — Restart
+now / Later"**. "Later" applies it on the next cold start. Each build profile
+has a channel: `preview` (test APKs from `pnpm build:apk`) and `production`
+(the Play Store AAB). Builds made before expo-updates was added never update.
+
+```bash
+pnpm publish:ota:preview                        # test phones first
+pnpm publish:ota:production                     # everyone
+pnpm publish:ota:production --message "Fix X"   # default message: last commit subject
+pnpm publish:ota:production --dry-run           # every check, no publish
+```
+
+`scripts/publish-ota.js` refuses to publish when:
+
+- **production has uncommitted changes** (preview only warns);
+- **no finished build on that channel has this tree's runtime version.** The
+  runtime is a fingerprint of everything native: packages, `app.json`,
+  `eas.json`, icons, config plugins. If any of them changed since the build,
+  no phone could run the update, so ship a new build instead. Plain JS/TS
+  edits never change it.
+
+It numbers each publish: `1.0.5` is the code inside the build, then `1.0.5.1`,
+`1.0.5.2`. That number is shown under Account → App version (`· update 1.0.5.2`)
+and sent to `/api/app-version/` as `js_version`. The bundle gets the profile's
+`EXPO_PUBLIC_*` values from `eas.json`, never the local `.env`.
+
+**Only JS goes over the air.** A new native package, permission, config plugin,
+or anything else in the fingerprint needs a new build and a store release.
+Play's policy allows self-updating code only when it runs in an interpreter,
+which is the exception React Native's JS relies on. Never use an update to ship
+something Play would reject in review, such as payments.
+
+To force a fix out: publish to production, then set `MOBILE_MIN_JS_VERSION` on
+Railway to the number the script printed. It is a floor, not a list, for the
+same reason `MOBILE_MIN_VERSION` is: a list would need editing on every
+publish, and forgetting once would nag phones that are already up to date.
+
+`eas login` must be the `cliffordombiro` account that owns the project.
 
 ## Permissions
 
