@@ -419,29 +419,6 @@ export interface ActiveImportJob extends ImportJob {
   player_slug: string;
 }
 
-// ── Payments ─────────────────────────────────────────────────────────────────
-
-export type PaymentStatus = "pending" | "completed" | "failed";
-
-/** Mirrors _serialize_payment in payments/views.py. */
-export interface Payment {
-  /** The id everywhere: what we poll, and what Paystack names in every event. */
-  reference: string;
-  status: PaymentStatus;
-  amount: string;
-  currency: string;
-  /** "mobile_money", "card"… Empty until the payer has chosen one. */
-  channel: string;
-  /** Paystack's hosted checkout page. Where the payer is sent. */
-  authorization_url: string;
-  /** Our wording, derived from status. Null unless failed. */
-  failure_reason: string | null;
-  created_at: string;
-  completed_at: string | null;
-  /** Present on create: true when an unfinished checkout was handed back. */
-  reused_existing?: boolean;
-}
-
 
 
 /** GET /players/<slug>/bot-book/?color=: one of the player's games in that colour, for the bot's book. */

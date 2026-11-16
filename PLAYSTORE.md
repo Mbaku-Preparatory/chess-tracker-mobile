@@ -123,21 +123,20 @@ party being up.
 
 ## Payments are web-only, on purpose
 
-`TipSection` is gated behind `Platform.OS === "web"` in `AccountScreen`, so the
-packaged Android app contains no way to send money.
+The packaged Android app contains no way to send money. Subscriptions are
+paid on the website; the app's only money code, a tip section that was never
+shown in the native build, was removed on 2026-11-16 along with tips on the
+web.
 
 Google Play requires its own billing system for in-app purchases. There are
-carve-outs, and a voluntary tip to a developer may well sit inside one — but
-the edge between "donation" and "payment for a digital service" is exactly
-where listings get rejected, and getting it wrong *after* approval is a
-suspension of an application id Google binds to the listing permanently.
+carve-outs, but the edge between "donation" and "payment for a digital
+service" is exactly where listings get rejected, and getting it wrong *after*
+approval is a suspension of an application id Google binds to the listing
+permanently.
 
-The web tip flow is untouched and still takes real money through Paystack.
-
-**Before ungating this**, in order: read Google's current Payments policy on
-donations, answer the Data safety form's financial-info questions, and confirm
-the privacy policy's "Supporting the project" section still matches — it
-currently states in as many words that the Android app does not include this.
+**Before adding any payment to the app**, in order: read Google's current
+Payments policy, answer the Data safety form's financial-info questions, and
+make sure the privacy policy still says what the app does.
 
 ## Build
 
