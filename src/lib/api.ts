@@ -8,7 +8,6 @@ import type {
   ChessComImportResult,
   ActiveImportJob,
   ImportJob,
-  Payment,
   LichessImportResult,
   Game,
   GamesFilter,
@@ -241,28 +240,6 @@ export const api = {
       body: JSON.stringify(payload),
       signal,
     });
-  },
-
-  // ── Payments ───────────────────────────────────────────────────────────────
-
-  /**
-   * Open a Paystack checkout for a tip.
-   *
-   * Resolves with somewhere to pay, not with a payment — open
-   * `authorization_url` and poll getPayment until the status settles. The
-   * amount is the only thing the client gets to choose; what it is for is
-   * decided by the backend.
-   */
-  createTip(amount: number): Promise<Payment> {
-    return fetchJson(`${API_BASE}/payments/tip/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount }),
-    });
-  },
-
-  getPayment(reference: string): Promise<Payment> {
-    return fetchJson(`${API_BASE}/payments/${encodeURIComponent(reference)}/`);
   },
 
   // ── Background import jobs ─────────────────────────────────────────────────

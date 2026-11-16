@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
@@ -9,7 +9,6 @@ import { versionLabel } from "@/lib/appVersion";
 import { PRIVACY_POLICY_URL } from "@/lib/links";
 import { useTheme } from "@/theme/ThemeContext";
 import { Screen } from "@/components/layout/Screen";
-import { TipSection } from "@/components/TipSection";
 import { AccountSection } from "@/components/account/AccountSection";
 import { ConnectedAccounts } from "@/components/account/ConnectedAccounts";
 import { DeleteAccount } from "@/components/account/DeleteAccount";
@@ -225,28 +224,6 @@ export function AccountScreen({ navigation }: Props) {
           lets you create one. This is it, and it deletes at once. */}
       {profile && <DeleteAccount hasPassword={hasPassword} />}
 
-      {/* Support — web only, and deliberately so.
-          
-          Google Play requires its own billing system for in-app purchases,
-          with carve-outs whose edges (donation vs. tip for a digital service)
-          are exactly where listings get rejected — or worse, suspended after
-          approval, which is unrecoverable for an application id Google binds
-          to the listing forever.
-          
-          The web flow is unaffected and still takes tips. This only hides the
-          entry point in the packaged app. Gated on `!== "web"` rather than on
-          Android specifically, because Apple's rules on the same question are
-          stricter still and this app has an ios target configured.
-          
-          Removing this gate means answering Google's Payments policy first,
-          not just deciding the button looks fine. */}
-      {Platform.OS === "web" && (
-        <View style={{ marginTop: 24 }}>
-          <Text style={[st.sectionLabel, { color: t.textMuted }]}>SUPPORT</Text>
-          <TipSection />
-        </View>
-      )}
-
       <View style={{ height: 24 }} />
       <Button title="Back" variant="ghost" onPress={() => navigation.goBack()} />
       <View style={{ height: 40 }} />
@@ -255,7 +232,6 @@ export function AccountScreen({ navigation }: Props) {
 }
 
 const st = StyleSheet.create({
-  sectionLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, marginBottom: 8 },
   row: {
     flexDirection: "row",
     alignItems: "center",
